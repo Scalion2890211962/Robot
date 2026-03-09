@@ -1,0 +1,1548 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCB工程师焊接训练（1:1 CSS手绘电路图）</title>
+    <style>
+        :root {
+            --primary-color: #000;
+            --bg-color: #f5f5f5;
+            --container-bg: #fff;
+            --hot-color: #ff2222;
+            --aiming-color: #ffff00;
+            --completed-color: #66ff66;
+            --uncompleted-color: #aaaaaa;
+            --ui-bg: rgba(255,255,255,0.8);
+            --btn-gradient: linear-gradient(to bottom, #ff6600, #ff3300);
+            --btn-hover-gradient: linear-gradient(to bottom, #ff8800, #ff5500);
+            /* 科幻配色新增 */
+            --cyber-blue: #00f0ff;
+            --cyber-purple: #9d00ff;
+            --cyber-dark: #121826;
+            --cyber-glow: rgba(0, 240, 255, 0.8);
+            --cyber-purple-glow: rgba(157, 0, 255, 0.8);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 微软雅黑, Arial, sans-serif;
+            user-select: none;
+            cursor: default;
+        }
+
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            background: var(--container-bg);
+            overflow: hidden;
+            border: 2px solid var(--primary-color);
+            touch-action: none;
+            cursor: default;
+        }
+
+        .circuit-element {
+            position: absolute;
+        }
+
+        /* IC3 样式 */
+        #ic3 {
+            top: 10px;
+            left: 200px;
+            width: 500px;
+            height: 120px;
+            background: var(--container-bg);
+            border: 3px solid var(--primary-color);
+        }
+
+        #ic3::before {
+            content: "IC3";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .ic3-pin {
+            position: absolute;
+            bottom: -15px;
+            width: 10px;
+            height: 15px;
+            background: var(--primary-color);
+        }
+
+        .ic3-pin:nth-child(1) { left: 50px; }
+        .ic3-pin:nth-child(2) { left: 110px; }
+        .ic3-pin:nth-child(3) { left: 170px; }
+        .ic3-pin:nth-child(4) { left: 230px; }
+        .ic3-pin:nth-child(5) { left: 290px; }
+        .ic3-pin:nth-child(6) { left: 350px; }
+        .ic3-pin:nth-child(7) { left: 410px; }
+        .ic3-pin:nth-child(8) { left: 470px; }
+
+        .ic3-label {
+            position: absolute;
+            bottom: -35px;
+            font-size: 14px;
+        }
+
+        .ic3-label:nth-child(1) { left: 40px;  content: "V+"; }
+        .ic3-label:nth-child(2) { left: 100px; content: "GND"; }
+        .ic3-label:nth-child(3) { left: 160px; content: "C01"; }
+        .ic3-label:nth-child(4) { left: 220px; content: "C02"; }
+        .ic3-label:nth-child(5) { left: 280px; content: "T1"; }
+        .ic3-label:nth-child(6) { left: 340px; content: "T2"; }
+        .ic3-label:nth-child(7) { left: 400px; content: "CP"; }
+        .ic3-label:nth-child(8) { left: 460px; content: "Nc"; }
+
+        /* C7 电容 */
+        #c7 {
+            top: 150px;
+            left: 250px;
+            width: 40px;
+            height: 80px;
+            border: 2px solid var(--primary-color);
+            background: var(--container-bg);
+        }
+
+        #c7::before {
+            content: "C7\n100μ";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 12px;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        #c7::after {
+            content: "+";
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            font-size: 12px;
+        }
+
+        #c7-pin1, #c7-pin2 {
+            width: 2px;
+            height: 20px;
+            background: var(--primary-color);
+            position: absolute;
+        }
+
+        #c7-pin1 { top: 130px; left: 270px; }
+        #c7-pin2 { top: 230px; left: 270px; }
+
+        #c7-pin2::after {
+            content: "";
+            position: absolute;
+            bottom: -10px;
+            left: -1px;
+            width: 4px;
+            height: 10px;
+            border-left: 2px solid var(--primary-color);
+            border-right: 2px solid var(--primary-color);
+        }
+
+        /* C8 可调电容 */
+        #c8 {
+            top: 150px;
+            left: 380px;
+            width: 60px;
+            height: 60px;
+            border: 2px solid var(--primary-color);
+            border-radius: 50%;
+        }
+
+        #c8::before {
+            content: "C8\n15/5p";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 12px;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        #c8-pin1, #c8-pin2 {
+            width: 2px;
+            height: 20px;
+            background: var(--primary-color);
+            position: absolute;
+            top: 130px;
+        }
+
+        #c8-pin1 { left: 410px; }
+        #c8-pin2 { left: 430px; }
+
+        /* L2 电感 */
+        #l2 {
+            top: 150px;
+            left: 520px;
+            width: 60px;
+            height: 40px;
+            border: 2px solid var(--primary-color);
+            border-radius: 50%;
+        }
+
+        #l2::before {
+            content: "L2";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 12px;
+        }
+
+        #l2-pin1, #l2-pin2 {
+            width: 2px;
+            height: 20px;
+            background: var(--primary-color);
+            position: absolute;
+            top: 130px;
+        }
+
+        #l2-pin1 { left: 540px; }
+        #l2-pin2 { left: 560px; }
+
+        /* 左侧IC芯片 */
+        #ic-left {
+            top: 200px;
+            left: 50px;
+            width: 120px;
+            height: 120px;
+            background: var(--primary-color);
+            border: 3px solid var(--container-bg);
+            outline: 2px solid var(--primary-color);
+        }
+
+        .ic-left-pin {
+            position: absolute;
+            width: 15px;
+            height: 3px;
+            background: var(--primary-color);
+        }
+
+        .ic-left-pin:nth-child(1) { top: 20px;  left: -15px; }
+        .ic-left-pin:nth-child(2) { top: 40px;  left: -15px; }
+        .ic-left-pin:nth-child(3) { top: 60px;  left: -15px; }
+        .ic-left-pin:nth-child(4) { top: 80px;  left: -15px; }
+        .ic-left-pin:nth-child(5) { top: 100px; left: -15px; }
+        .ic-left-pin:nth-child(6) { top: 120px; left: -15px; }
+        .ic-left-pin:nth-child(7) { top: 140px; left: -15px; }
+        .ic-left-pin:nth-child(8) { top: 160px; left: -15px; }
+        .ic-left-pin:nth-child(9) { top: 20px;  right: -15px; }
+        .ic-left-pin:nth-child(10) { top: 40px;  right: -15px; }
+        .ic-left-pin:nth-child(11) { top: 60px;  right: -15px; }
+        .ic-left-pin:nth-child(12) { top: 80px;  right: -15px; }
+        .ic-left-pin:nth-child(13) { top: 100px; right: -15px; }
+        .ic-left-pin:nth-child(14) { top: 120px; right: -15px; }
+        .ic-left-pin:nth-child(15) { top: 140px; right: -15px; }
+        .ic-left-pin:nth-child(16) { top: 160px; right: -15px; }
+
+        /* 左侧电阻电容 */
+        #r-left {
+            top: 50px;
+            left: 80px;
+            width: 30px;
+            height: 60px;
+            border: 2px solid var(--primary-color);
+            background: repeating-linear-gradient(
+                0deg,
+                var(--primary-color) 0px,
+                var(--primary-color) 5px,
+                var(--container-bg) 5px,
+                var(--container-bg) 10px
+            );
+        }
+
+        #c-left {
+            top: 50px;
+            left: 140px;
+            width: 40px;
+            height: 60px;
+            border: 2px solid var(--primary-color);
+            background: var(--primary-color);
+        }
+
+        #c-left::before {
+            content: "CΔV";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(90deg);
+            color: var(--container-bg);
+            font-size: 12px;
+        }
+
+        /* IC4 样式 */
+        #ic4 {
+            top: 350px;
+            left: 150px;
+            width: 100px;
+            height: 200px;
+            background: var(--primary-color);
+            border-radius: 10px;
+        }
+
+        #ic4::before {
+            content: "IC4";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--container-bg);
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .ic4-pin-left, .ic4-pin-right {
+            position: absolute;
+            width: 15px;
+            height: 3px;
+            background: var(--primary-color);
+        }
+
+        .ic4-pin-left { left: -15px; }
+        .ic4-pin-right { right: -15px; }
+
+        .ic4-pin-left:nth-child(1) { top: 30px;  }
+        .ic4-pin-left:nth-child(2) { top: 60px;  }
+        .ic4-pin-left:nth-child(3) { top: 90px;  }
+        .ic4-pin-left:nth-child(4) { top: 120px; }
+        .ic4-pin-left:nth-child(5) { top: 150px; }
+        .ic4-pin-left:nth-child(6) { top: 180px; }
+        .ic4-pin-left:nth-child(7) { top: 210px; }
+        .ic4-pin-left:nth-child(8) { top: 240px; }
+        .ic4-pin-left:nth-child(9) { top: 270px; }
+
+        .ic4-pin-right:nth-child(1) { top: 30px;  }
+        .ic4-pin-right:nth-child(2) { top: 60px;  }
+        .ic4-pin-right:nth-child(3) { top: 90px;  }
+        .ic4-pin-right:nth-child(4) { top: 120px; }
+        .ic4-pin-right:nth-child(5) { top: 150px; }
+        .ic4-pin-right:nth-child(6) { top: 180px; }
+        .ic4-pin-right:nth-child(7) { top: 210px; }
+        .ic4-pin-right:nth-child(8) { top: 240px; }
+        .ic4-pin-right:nth-child(9) { top: 270px; }
+
+        .ic4-label-left, .ic4-label-right {
+            position: absolute;
+            font-size: 14px;
+        }
+
+        .ic4-label-left { left: -80px; }
+        .ic4-label-right { right: -80px; }
+
+        .ic4-label-left:nth-child(1) { top: 25px;  content: "S9"; }
+        .ic4-label-left:nth-child(2) { top: 55px;  content: "S10"; }
+        .ic4-label-left:nth-child(3) { top: 85px;  content: "S11"; }
+        .ic4-label-left:nth-child(4) { top: 115px; content: "S12"; }
+        .ic4-label-left:nth-child(5) { top: 145px; content: "S13"; }
+        .ic4-label-left:nth-child(6) { top: 175px; content: "S14"; }
+        .ic4-label-left:nth-child(7) { top: 205px; content: "S15"; }
+        .ic4-label-left:nth-child(8) { top: 235px; content: "S16"; }
+        .ic4-label-left:nth-child(9) { top: 265px; content: "C9\n0.1μ"; }
+
+        .ic4-label-right:nth-child(1) { top: 25px;  content: "18"; }
+        .ic4-label-right:nth-child(2) { top: 55px;  content: "17"; }
+        .ic4-label-right:nth-child(3) { top: 85px;  content: "16"; }
+        .ic4-label-right:nth-child(4) { top: 115px; content: "15\nR3\n100k"; }
+        .ic4-label-right:nth-child(5) { top: 145px; content: "14"; }
+        .ic4-label-right:nth-child(6) { top: 175px; content: "13"; }
+        .ic4-label-right:nth-child(7) { top: 205px; content: "12\n数据码"; }
+        .ic4-label-right:nth-child(8) { top: 235px; content: "11"; }
+        .ic4-label-right:nth-child(9) { top: 265px; content: "10"; }
+
+        /* 电阻 R3/R4 */
+        #r3 {
+            top: 440px;
+            left: 300px;
+            width: 100px;
+            height: 30px;
+            border: 2px solid var(--primary-color);
+            background: var(--container-bg);
+        }
+
+        #r3::before {
+            content: "R3\n100k";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 12px;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        #r4 {
+            top: 400px;
+            left: 450px;
+            width: 60px;
+            height: 30px;
+            border: 2px solid var(--primary-color);
+            background: var(--container-bg);
+        }
+
+        #r4::before {
+            content: "R4\n2k";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 12px;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        /* 三极管 V */
+        #v {
+            top: 400px;
+            left: 550px;
+            width: 40px;
+            height: 60px;
+            border: 2px solid var(--primary-color);
+            background: var(--container-bg);
+        }
+
+        #v::before {
+            content: "V";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        #v-pin1, #v-pin2, #v-pin3 {
+            width: 2px;
+            height: 20px;
+            background: var(--primary-color);
+            position: absolute;
+            left: 570px;
+        }
+
+        #v-pin1 { top: 400px; }
+        #v-pin2 { top: 430px; }
+        #v-pin3 { top: 460px; }
+
+        /* 继电器 K */
+        #k {
+            top: 350px;
+            left: 600px;
+            width: 60px;
+            height: 40px;
+            border: 2px solid var(--primary-color);
+            background: var(--container-bg);
+        }
+
+        #k::before {
+            content: "K\n6V";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 12px;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        /* 二极管 VD */
+        #vd {
+            top: 350px;
+            left: 680px;
+            width: 30px;
+            height: 40px;
+            border: 2px solid var(--primary-color);
+            background: var(--container-bg);
+        }
+
+        #vd::before {
+            content: "VD";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 12px;
+        }
+
+        #vd::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 0;
+            height: 0;
+            border-left: 10px solid var(--primary-color);
+            border-top: 8px solid transparent;
+            border-bottom: 8px solid transparent;
+        }
+
+        /* C10 电容 */
+        #c10 {
+            top: 450px;
+            left: 700px;
+            width: 40px;
+            height: 80px;
+            border: 2px solid var(--primary-color);
+            background: var(--container-bg);
+        }
+
+        #c10::before {
+            content: "C10\n100μ";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 12px;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        #c10::after {
+            content: "+";
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            font-size: 12px;
+        }
+
+        #c10-pin1, #c10-pin2 {
+            width: 2px;
+            height: 20px;
+            background: var(--primary-color);
+            position: absolute;
+            left: 720px;
+        }
+
+        #c10-pin1 { top: 430px; }
+        #c10-pin2 { top: 530px; }
+
+        #c10-pin2::after {
+            content: "";
+            position: absolute;
+            bottom: -10px;
+            left: -1px;
+            width: 4px;
+            height: 10px;
+            border-left: 2px solid var(--primary-color);
+            border-right: 2px solid var(--primary-color);
+        }
+
+        /* 右侧电阻 */
+        .r-right {
+            width: 30px;
+            height: 60px;
+            border: 2px solid var(--primary-color);
+            background: repeating-linear-gradient(
+                0deg,
+                var(--primary-color) 0px,
+                var(--primary-color) 5px,
+                var(--container-bg) 5px,
+                var(--container-bg) 10px
+            );
+            position: absolute;
+        }
+
+        #r-right1 {
+            top: 250px;
+            left: 750px;
+        }
+
+        #r-right1::before {
+            content: "OW";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(90deg);
+            font-size: 12px;
+        }
+
+        #r-right2 {
+            top: 500px;
+            left: 600px;
+        }
+
+        #r-right3 {
+            top: 500px;
+            left: 680px;
+        }
+
+        #r-right3::before {
+            content: "1";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(90deg);
+            font-size: 12px;
+        }
+
+        #r-right4 {
+            top: 500px;
+            left: 760px;
+        }
+
+        /* 右侧电容/电感 */
+        .c-right {
+            width: 60px;
+            height: 60px;
+            border: 2px solid var(--primary-color);
+            border-radius: 50%;
+            background: var(--primary-color);
+            position: absolute;
+        }
+
+        .c-right::before {
+            content: "";
+            position: absolute;
+            top: 20%;
+            left: 20%;
+            width: 60%;
+            height: 60%;
+            border: 2px solid var(--container-bg);
+            border-radius: 50%;
+        }
+
+        #c-right1 { top: 350px; left: 820px; }
+        #c-right2 { top: 500px; left: 880px; }
+
+        /* 走线样式 */
+        .trace {
+            position: absolute;
+            background: var(--primary-color);
+        }
+
+        #trace1 { top: 125px; left: 270px; width: 2px; height: 225px; }
+        #trace2 { top: 350px; left: 270px; width: 120px; height: 2px; }
+        #trace3 { top: 125px; left: 410px; width: 2px; height: 225px; }
+        #trace4 { top: 350px; left: 410px; width: 340px; height: 2px; }
+        #trace5 { top: 400px; left: 300px; width: 150px; height: 2px; }
+        #trace6 { top: 400px; left: 450px; width: 100px; height: 2px; }
+        #trace7 { top: 400px; left: 570px; width: 30px; height: 2px; }
+        #trace8 { top: 350px; left: 600px; width: 80px; height: 2px; }
+        #trace9 { top: 430px; left: 720px; width: 80px; height: 2px; }
+        #trace10 { top: 350px; left: 800px; width: 2px; height: 80px; }
+        #trace11 { 
+            top: 350px; left: 800px; width: 20px; height: 2px; 
+        }
+
+        #trace11::before { 
+            content: "+6V"; 
+            position: absolute; 
+            top: -20px; 
+            left: 0; 
+            font-size: 14px; 
+        }
+
+        /* ======================== 科幻风电烙铁样式 ======================== */
+        #soldering-iron {
+            position: absolute;
+            width: 220px;
+            height: 80px;
+            transform-origin: 0 0; /* 旋转原点=烙铁尖 */
+            transform: rotate(-30deg) scaleX(-1) scaleY(-1);
+            pointer-events: none;
+            z-index: 99;
+            margin: 0 !important;
+            padding: 0 !important;
+            /* 科幻光影效果 */
+            filter: drop-shadow(0 0 8px var(--cyber-glow));
+        }
+
+        /* 科幻手柄 */
+        #iron-handle {
+            position: absolute;
+            top: 10px;
+            left: 0;
+            width: 120px;
+            height: 50px;
+            /* 渐变金属质感 */
+            background: linear-gradient(90deg, var(--cyber-dark), #1e293b, var(--cyber-dark));
+            /* 圆角+切割感 */
+            border-radius: 12px 25px 25px 12px;
+            /* 科幻边框 */
+            border: 2px solid var(--cyber-blue);
+            /* 内部发光 */
+            box-shadow: inset 0 0 15px var(--cyber-glow), 0 0 10px var(--cyber-glow);
+            /* 细节纹理 */
+            background-image: 
+                linear-gradient(transparent 48%, rgba(0,240,255,0.2) 48%, rgba(0,240,255,0.2) 52%, transparent 52%),
+                linear-gradient(90deg, transparent 48%, rgba(0,240,255,0.1) 48%, rgba(0,240,255,0.1) 52%, transparent 52%);
+            background-size: 20px 20px;
+        }
+
+        #iron-handle::before {
+            content: "SYNTH-01";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-15deg) scaleX(-1);
+            font-size: 14px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            color: var(--cyber-blue);
+            text-shadow: 0 0 5px var(--cyber-glow);
+            font-family: 'Courier New', monospace;
+        }
+
+        /* 科幻连接管 */
+        #iron-cord {
+            position: absolute;
+            top: 25px;
+            left: 120px;
+            width: 90px;
+            height: 15px;
+            background: linear-gradient(90deg, var(--cyber-purple), var(--cyber-blue));
+            border-radius: 8px;
+            border: 1px solid var(--cyber-blue);
+            box-shadow: 0 0 10px var(--cyber-purple-glow), inset 0 0 5px rgba(255,255,255,0.3);
+        }
+
+        #iron-cord::before {
+            content: "";
+            position: absolute;
+            top: -8px;
+            left: -15px;
+            width: 25px;
+            height: 30px;
+            background: var(--cyber-dark);
+            border: 2px solid var(--cyber-purple);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--cyber-purple-glow), inset 0 0 8px rgba(157,0,255,0.5);
+            /* 能量环效果 */
+            background-image: 
+                radial-gradient(circle, transparent 60%, rgba(157,0,255,0.4) 60%);
+        }
+
+        /* 科幻套筒/散热 */
+        #iron-sleeve {
+            position: absolute;
+            top: 15px;
+            left: 80px;
+            width: 70px;
+            height: 35px;
+            background: var(--cyber-dark);
+            border-radius: 15px;
+            border: 2px solid var(--cyber-purple);
+            box-shadow: 0 0 12px var(--cyber-purple-glow), inset 0 0 10px rgba(157,0,255,0.3);
+            /* 散热格栅 */
+            background-image: 
+                linear-gradient(90deg, transparent 30%, rgba(157,0,255,0.2) 30%, rgba(157,0,255,0.2) 35%, transparent 35%),
+                linear-gradient(90deg, transparent 60%, rgba(157,0,255,0.2) 60%, rgba(157,0,255,0.2) 65%, transparent 65%);
+            background-size: 100% 100%;
+        }
+
+        #iron-sleeve::before, #iron-sleeve::after {
+            content: "";
+            position: absolute;
+            width: 50px;
+            height: 8px;
+            background: linear-gradient(90deg, var(--cyber-purple), var(--cyber-blue));
+            border-radius: 4px;
+            left: 10px;
+            box-shadow: 0 0 5px var(--cyber-glow);
+        }
+
+        #iron-sleeve::before { top: -5px; }
+        #iron-sleeve::after { bottom: -5px; }
+
+        /* 科幻烙铁杆 */
+        #iron-rod {
+            position: absolute;
+            top: 25px;
+            left: 110px;
+            width: 100px;
+            height: 12px;
+            /* 渐变能量管 */
+            background: linear-gradient(90deg, var(--cyber-purple), var(--cyber-blue));
+            border-radius: 6px;
+            border: 1px solid white;
+            box-shadow: 0 0 15px var(--cyber-glow), inset 0 0 8px rgba(255,255,255,0.5);
+            /* 能量流动纹理 */
+            background-image: 
+                linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%);
+            background-size: 40px 100%;
+            animation: energyFlow 2s linear infinite;
+        }
+
+        /* 能量流动动画 */
+        @keyframes energyFlow {
+            0% { background-position: 0 0; }
+            100% { background-position: 40px 0; }
+        }
+
+        #iron-rod::before,
+        #iron-rod::after,
+        #iron-rod .hole1,
+        #iron-rod .hole2 {
+            content: "";
+            position: absolute;
+            width: 5px;
+            height: 5px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 0 5px white;
+        }
+
+        #iron-rod::before { top: 3px; left: 15px; }
+        #iron-rod::after { top: 3px; left: 35px; }
+        #iron-rod .hole1 { top: 3px; left: 55px; }
+        #iron-rod .hole2 { top: 3px; left: 75px; }
+
+        /* 科幻烙铁头 */
+        #iron-tip {
+            position: absolute;
+            top: 0px;
+            left: 0px;
+            width: 0;
+            height: 0;
+            /* 尖锐科幻造型 */
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-bottom: 20px solid var(--cyber-blue);
+            z-index: 100;
+            transition: all 0.2s ease;
+            transform-origin: 0 0;
+            margin: 0 !important;
+            padding: 0 !important;
+            transform: scaleY(-1);
+            /* 发光效果 */
+            filter: drop-shadow(0 0 8px var(--cyber-glow));
+            /* 能量脉冲 */
+            animation: tipPulse 1.5s ease-in-out infinite;
+        }
+
+        /* 烙铁头脉冲动画 */
+        @keyframes tipPulse {
+            0%, 100% { filter: drop-shadow(0 0 8px var(--cyber-glow)); }
+            50% { filter: drop-shadow(0 0 15px var(--cyber-glow)); }
+        }
+
+        #iron-tip.hot {
+            border-bottom-color: var(--hot-color);
+            filter: drop-shadow(0 0 15px #ff2222);
+            animation: hotTipPulse 0.8s ease-in-out infinite;
+        }
+
+        @keyframes hotTipPulse {
+            0%, 100% { filter: drop-shadow(0 0 15px #ff2222); }
+            50% { filter: drop-shadow(0 0 25px #ff2222); }
+        }
+
+        #iron-tip.aiming {
+            filter: drop-shadow(0 0 20px var(--aiming-color));
+        }
+
+        /* 加热进度条（适配科幻风格） */
+        #heat-progress-container {
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 6px;
+            background: var(--cyber-dark);
+            border: 1px solid var(--cyber-blue);
+            border-radius: 3px;
+            overflow: hidden;
+            display: none;
+            z-index: 101;
+            box-shadow: 0 0 5px var(--cyber-glow);
+        }
+
+        #heat-progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--cyber-purple), var(--cyber-blue));
+            background-image: linear-gradient(90deg, transparent 50%, rgba(255,255,255,0.3) 50%);
+            background-size: 10px 10px;
+            transition: width 0.1s linear;
+            box-shadow: 0 0 5px var(--cyber-glow);
+        }
+
+        /* ======================== 原有样式保持不变 ======================== */
+        /* 焊点样式 */
+        .solder-point {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, var(--uncompleted-color), #cccccc);
+            border: 2px solid #777777;
+            transform: translate(1px, 1px);
+            box-shadow: 0 0 0 2px rgba(255, 153, 0, 0.5), 1px 1px 2px rgba(0,0,0,0.2);
+            z-index: 10;
+            transition: all 0.3s ease;
+        }
+
+        .solder-point.melted { 
+            background: linear-gradient(45deg, var(--completed-color), #88ff88); 
+            border-color: #33aa33; 
+            box-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+            cursor: default;
+        }
+
+        .progress-container {
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 6px;
+            background: #eeeeee;
+            border: 1px solid #999;
+            border-radius: 3px;
+            overflow: hidden;
+            display: block;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: #ffcc00;
+            background-image: linear-gradient(90deg, transparent 50%, rgba(255,255,255,0.4) 50%);
+            background-size: 8px 8px;
+            transition: width 0.1s linear;
+        }
+
+        .solder-point.melting .progress-container { opacity: 1; }
+        .solder-point:not(.melting) .progress-container { opacity: 0.3; }
+
+        /* 火花特效 */
+        #spark-container { 
+            position: absolute; 
+            pointer-events: none; 
+            z-index: 105; 
+        }
+
+        .spark {
+            position: absolute;
+            width: 2px; 
+            height: 2px;
+            background: #ffcc00;
+            border-radius: 50%;
+            opacity: 0.8;
+            filter: blur(0.5px);
+            animation: spark-fly 0.6s ease-out forwards;
+        }
+
+        @keyframes spark-fly {
+            0% { transform: translate(0, 0); opacity: 0.8; }
+            100% { transform: translate(calc(var(--dx) * 10px), calc(var(--dy) * 10px)); opacity: 0; }
+        }
+
+        /* UI面板 */
+        #ui-panel {
+            position: absolute;
+            top: 10px; 
+            left: 10px;
+            color: #333333;
+            font-size: 16px;
+            text-shadow: 1px 1px 0px #ffffff;
+            z-index: 200;
+            background: var(--ui-bg);
+            padding: 5px 10px;
+            border: 1px solid #999;
+            border-radius: 4px;
+            backdrop-filter: blur(2px);
+        }
+
+        /* 开始/结束屏幕 */
+        #start-screen, #game-over-screen {
+            position: absolute;
+            top: 0; 
+            left: 0;
+            width: 100%; 
+            height: 100%;
+            background: rgba(255,255,255,0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #333;
+            z-index: 9999;
+            border: 2px solid #333;
+            backdrop-filter: blur(3px);
+        }
+
+        #game-over-screen { display: none; }
+
+        /* 按钮样式 */
+        .game-btn {
+            padding: 14px 28px;
+            font-size: 18px;
+            background: var(--btn-gradient);
+            border: 2px solid #cc3300;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            box-shadow: 2px 2px 3px rgba(0,0,0,0.2);
+            transition: all 0.2s ease;
+            margin-top: 20px;
+        }
+
+        .game-btn:hover { 
+            background: var(--btn-hover-gradient);
+            transform: translate(-1px, -1px);
+            box-shadow: 3px 3px 5px rgba(0,0,0,0.3);
+        }
+
+        .game-btn:active {
+            transform: translate(1px, 1px);
+            box-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+        }
+
+        /* 提示文本 */
+        #tip-text {
+            position: absolute;
+            bottom: 15px; 
+            left: 15px;
+            color: #333;
+            font-size: 14px;
+            text-shadow: 1px 1px 0px #ffffff;
+            z-index: 200;
+            background: var(--ui-bg);
+            padding: 4px 8px;
+            border: 1px solid #999;
+            border-radius: 4px;
+            backdrop-filter: blur(2px);
+        }
+
+        /* 响应式适配 */
+        @media (max-width: 850px) {
+            #game-container {
+                transform: scale(0.8);
+                transform-origin: center;
+            }
+        }
+
+        @media (max-width: 700px) {
+            #game-container {
+                transform: scale(0.6);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <!-- 电路元素 -->
+        <div id="ic3" class="circuit-element">
+            <div class="ic3-pin"></div>
+            <div class="ic3-pin"></div>
+            <div class="ic3-pin"></div>
+            <div class="ic3-pin"></div>
+            <div class="ic3-pin"></div>
+            <div class="ic3-pin"></div>
+            <div class="ic3-pin"></div>
+            <div class="ic3-pin"></div>
+            <div class="ic3-label"></div>
+            <div class="ic3-label"></div>
+            <div class="ic3-label"></div>
+            <div class="ic3-label"></div>
+            <div class="ic3-label"></div>
+            <div class="ic3-label"></div>
+            <div class="ic3-label"></div>
+            <div class="ic3-label"></div>
+        </div>
+
+        <div id="c7" class="circuit-element"></div>
+        <div id="c7-pin1" class="trace"></div>
+        <div id="c7-pin2" class="trace"></div>
+
+        <div id="c8" class="circuit-element"></div>
+        <div id="c8-pin1" class="trace"></div>
+        <div id="c8-pin2" class="trace"></div>
+
+        <div id="l2" class="circuit-element"></div>
+        <div id="l2-pin1" class="trace"></div>
+        <div id="l2-pin2" class="trace"></div>
+
+        <div id="ic-left" class="circuit-element">
+            <div class="ic-left-pin"></div>
+            <div class="ic-left-pin"></div>
+            <div class="ic-left-pin"></div>
+            <div class="ic-left-pin"></div>
+            <div class="ic-left-pin"></div>
+            <div class="ic-left-pin"></div>
+            <div class="ic-left-pin"></div>
+            <div class="ic-left-pin"></div>
+            <div class="ic-left-pin"></div>
+            <div class="ic-left-pin"></div>
+            <div class="ic-left-pin"></div>
+            <div class="ic-left-pin"></div>
+            <div class="ic-left-pin"></div>
+            <div class="ic-left-pin"></div>
+            <div class="ic-left-pin"></div>
+            <div class="ic-left-pin"></div>
+        </div>
+
+        <div id="r-left" class="circuit-element"></div>
+        <div id="c-left" class="circuit-element"></div>
+
+        <div id="ic4" class="circuit-element">
+            <div class="ic4-pin-left"></div>
+            <div class="ic4-pin-left"></div>
+            <div class="ic4-pin-left"></div>
+            <div class="ic4-pin-left"></div>
+            <div class="ic4-pin-left"></div>
+            <div class="ic4-pin-left"></div>
+            <div class="ic4-pin-left"></div>
+            <div class="ic4-pin-left"></div>
+            <div class="ic4-pin-left"></div>
+            <div class="ic4-pin-right"></div>
+            <div class="ic4-pin-right"></div>
+            <div class="ic4-pin-right"></div>
+            <div class="ic4-pin-right"></div>
+            <div class="ic4-pin-right"></div>
+            <div class="ic4-pin-right"></div>
+            <div class="ic4-pin-right"></div>
+            <div class="ic4-pin-right"></div>
+            <div class="ic4-pin-right"></div>
+            <div class="ic4-label-left"></div>
+            <div class="ic4-label-left"></div>
+            <div class="ic4-label-left"></div>
+            <div class="ic4-label-left"></div>
+            <div class="ic4-label-left"></div>
+            <div class="ic4-label-left"></div>
+            <div class="ic4-label-left"></div>
+            <div class="ic4-label-left"></div>
+            <div class="ic4-label-left"></div>
+            <div class="ic4-label-right"></div>
+            <div class="ic4-label-right"></div>
+            <div class="ic4-label-right"></div>
+            <div class="ic4-label-right"></div>
+            <div class="ic4-label-right"></div>
+            <div class="ic4-label-right"></div>
+            <div class="ic4-label-right"></div>
+            <div class="ic4-label-right"></div>
+            <div class="ic4-label-right"></div>
+        </div>
+
+        <div id="r3" class="circuit-element"></div>
+        <div id="r4" class="circuit-element"></div>
+        <div id="v" class="circuit-element"></div>
+        <div id="v-pin1" class="trace"></div>
+        <div id="v-pin2" class="trace"></div>
+        <div id="v-pin3" class="trace"></div>
+        <div id="k" class="circuit-element"></div>
+        <div id="vd" class="circuit-element"></div>
+        <div id="c10" class="circuit-element"></div>
+        <div id="c10-pin1" class="trace"></div>
+        <div id="c10-pin2" class="trace"></div>
+        
+        <div id="r-right1" class="circuit-element r-right"></div>
+        <div id="r-right2" class="circuit-element r-right"></div>
+        <div id="r-right3" class="circuit-element r-right"></div>
+        <div id="r-right4" class="circuit-element r-right"></div>
+        
+        <div id="c-right1" class="circuit-element c-right"></div>
+        <div id="c-right2" class="circuit-element c-right"></div>
+
+        <!-- 走线 -->
+        <div id="trace1" class="trace"></div>
+        <div id="trace2" class="trace"></div>
+        <div id="trace3" class="trace"></div>
+        <div id="trace4" class="trace"></div>
+        <div id="trace5" class="trace"></div>
+        <div id="trace6" class="trace"></div>
+        <div id="trace7" class="trace"></div>
+        <div id="trace8" class="trace"></div>
+        <div id="trace9" class="trace"></div>
+        <div id="trace10" class="trace"></div>
+        <div id="trace11" class="trace"></div>
+
+        <!-- 游戏功能元素 -->
+        <div id="spark-container"></div>
+        
+        <div id="start-screen">
+            <h1 style="margin-bottom: 10px; text-shadow: 1px 1px 0px #ddd;">PCB 工程师焊接训练</h1>
+            <p style="margin:10px 0; text-shadow: 1px 1px 0px #ddd;">长按加热 · 对准焊点 · 焊接出火花</p>
+            <button id="start-btn" class="game-btn">开始训练</button>
+        </div>
+        
+        <div id="game-over-screen">
+            <h1 id="game-over-text" style="text-shadow: 1px 1px 0px #ddd;"></h1>
+            <p id="score-text" style="margin:10px 0; text-shadow: 1px 1px 0px #ddd;"></p>
+            <button id="restart-btn" class="game-btn">重新训练</button>
+        </div>
+        
+        <div id="soldering-iron">
+            <div id="iron-handle"></div>
+            <div id="iron-cord"></div>
+            <div id="iron-sleeve"></div>
+            <div id="iron-rod">
+                <div class="hole1"></div>
+                <div class="hole2"></div>
+            </div>
+            <div id="iron-tip"></div>
+            <div id="heat-progress-container">
+                <div id="heat-progress-bar"></div>
+            </div>
+        </div>
+        
+        <div id="ui-panel">
+            <div>时间：<span id="time-left">60</span>s</div>
+            <div>完成：<span id="completed-points">0</span>/<span id="total-points">0</span></div>
+        </div>
+        
+        <div id="tip-text">长按左键加热 | 烙铁尖对准焊点中心（黄色高亮=对准）</div>
+    </div>
+
+    <script>
+        // 游戏核心对象
+        const game = {
+            isPlaying: false,
+            timeLeft: 60,
+            totalPoints: 0,
+            completedPoints: 0,
+            isIronHot: false,
+            heatProgress: 0,
+            heatProgressInterval: null,
+            timerInterval: null,
+            progressInterval: null,
+            currentProgressPoint: null,
+            sparkInterval: null,
+            dom: {
+                container: document.getElementById('game-container'),
+                iron: document.getElementById('soldering-iron'),
+                ironTip: document.getElementById('iron-tip'),
+                heatProgressContainer: document.getElementById('heat-progress-container'),
+                heatProgressBar: document.getElementById('heat-progress-bar'),
+                sparkContainer: document.getElementById('spark-container'),
+                timeLeft: document.getElementById('time-left'),
+                completedPoints: document.getElementById('completed-points'),
+                totalPoints: document.getElementById('total-points'),
+                startScreen: document.getElementById('start-screen'),
+                gameOverScreen: document.getElementById('game-over-screen'),
+                gameOverText: document.getElementById('game-over-text'),
+                scoreText: document.getElementById('score-text'),
+                startBtn: document.getElementById('start-btn'),
+                restartBtn: document.getElementById('restart-btn'),
+                uiPanel: document.getElementById('ui-panel'),
+                tipText: document.getElementById('tip-text')
+            }
+        };
+
+        // 初始化焊点
+        function initSolderPoints() {
+            document.querySelectorAll('.solder-point').forEach(p => p.remove());
+            game.totalPoints = Math.floor(Math.random() * 4) + 8;
+            game.dom.totalPoints.textContent = game.totalPoints;
+            
+            const positions = [
+                {x: 270, y: 130}, {x: 270, y: 230}, {x: 410, y: 130}, {x: 410, y: 230},
+                {x: 300, y: 400}, {x: 450, y: 400}, {x: 570, y: 400}, {x: 600, y: 350},
+                {x: 720, y: 430}, {x: 720, y: 530}, {x: 270, y: 350}, {x: 410, y: 350}
+            ];
+
+            for (let i = 0; i < game.totalPoints; i++) {
+                const pos = positions[i % positions.length];
+                const point = document.createElement('div');
+                
+                point.className = 'solder-point';
+                point.style.left = (pos.x - 12) + 'px';
+                point.style.top = (pos.y - 12) + 'px';
+                point.dataset.x = pos.x;
+                point.dataset.y = pos.y;
+                
+                const progressContainer = document.createElement('div');
+                progressContainer.className = 'progress-container';
+                
+                const progressBar = document.createElement('div');
+                progressBar.className = 'progress-bar';
+                
+                progressContainer.appendChild(progressBar);
+                point.appendChild(progressContainer);
+                
+                game.dom.container.appendChild(point);
+            }
+        }
+
+        // 电烙铁跟随鼠标 - 180°对立面，烙铁尖仍精准
+        function moveIron(e) {
+            if (!game.isPlaying) return;
+            
+            const rect = game.dom.container.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // 烙铁位置设置为鼠标坐标（180°翻转后位置在对立面）
+            game.dom.iron.style.left = x + 'px';
+            game.dom.iron.style.top = y + 'px';
+            
+            checkAiming(x, y);
+            
+            if (game.isIronHot && game.currentProgressPoint) {
+                createSpark(
+                    parseInt(game.currentProgressPoint.dataset.x),
+                    parseInt(game.currentProgressPoint.dataset.y)
+                );
+            }
+        }
+
+        // 精准焊点检测
+        function checkAiming(mouseX, mouseY) {
+            let isAiming = false;
+            game.currentProgressPoint = null;
+            
+            document.querySelectorAll('.solder-point:not(.melted)').forEach(point => {
+                const pointX = parseInt(point.dataset.x);
+                const pointY = parseInt(point.dataset.y);
+                const distance = Math.hypot(mouseX - pointX, mouseY - pointY);
+                
+                if (distance < 15) {
+                    isAiming = true;
+                    game.currentProgressPoint = point;
+                }
+            });
+            
+            if (isAiming) {
+                game.dom.ironTip.classList.add('aiming');
+                if (game.isIronHot && game.currentProgressPoint) {
+                    startSparkEffect();
+                }
+            } else {
+                game.dom.ironTip.classList.remove('aiming');
+                if (game.currentProgressPoint) {
+                    game.currentProgressPoint.classList.remove('melting');
+                    if (game.currentProgressPoint.querySelector('.progress-bar')) {
+                        game.currentProgressPoint.querySelector('.progress-bar').style.width = '0%';
+                    }
+                    game.currentProgressPoint = null;
+                }
+            }
+        }
+
+        // 加热电烙铁
+        function startHeating() {
+            if (!game.isPlaying || game.isIronHot) return;
+            
+            game.isIronHot = false;
+            game.heatProgress = 0;
+            game.dom.heatProgressContainer.style.display = 'block';
+            
+            if (game.heatProgressInterval) clearInterval(game.heatProgressInterval);
+            
+            game.heatProgressInterval = setInterval(() => {
+                game.heatProgress += 1;
+                game.dom.heatProgressBar.style.width = game.heatProgress + '%';
+                
+                if (game.heatProgress >= 100) {
+                    clearInterval(game.heatProgressInterval);
+                    game.isIronHot = true;
+                    game.dom.ironTip.classList.add('hot');
+                    
+                    if (game.currentProgressPoint) {
+                        startSparkEffect();
+                    }
+                }
+            }, 30);
+        }
+
+        // 停止加热
+        function stopHeating() {
+            if (!game.isPlaying) return;
+            
+            if (game.heatProgressInterval) clearInterval(game.heatProgressInterval);
+            
+            game.isIronHot = false;
+            game.heatProgress = 0;
+            game.dom.heatProgressContainer.style.display = 'none';
+            game.dom.heatProgressBar.style.width = '0%';
+            game.dom.ironTip.classList.remove('hot');
+            
+            stopSparkEffect();
+            
+            if (game.currentProgressPoint) {
+                game.currentProgressPoint.classList.remove('melting');
+                if (game.currentProgressPoint.querySelector('.progress-bar')) {
+                    game.currentProgressPoint.querySelector('.progress-bar').style.width = '0%';
+                }
+            }
+            
+            if (game.progressInterval) {
+                clearInterval(game.progressInterval);
+                game.progressInterval = null;
+            }
+        }
+
+        // 火花特效
+        function startSparkEffect() {
+            if (!game.isIronHot || !game.currentProgressPoint) return;
+            
+            game.currentProgressPoint.classList.add('melting');
+            const progressBar = game.currentProgressPoint.querySelector('.progress-bar');
+            let progress = parseInt(progressBar.style.width) || 0;
+            
+            if (game.progressInterval) clearInterval(game.progressInterval);
+            
+            game.progressInterval = setInterval(() => {
+                progress += 1;
+                progressBar.style.width = progress + '%';
+                
+                for(let i=0; i<3; i++) {
+                    createSpark(
+                        parseInt(game.currentProgressPoint.dataset.x),
+                        parseInt(game.currentProgressPoint.dataset.y)
+                    );
+                }
+                
+                if (progress >= 100) {
+                    completeSolderPoint(game.currentProgressPoint);
+                }
+            }, 20);
+        }
+
+        // 创建火花
+        function createSpark(x, y) {
+            const spark = document.createElement('div');
+            spark.className = 'spark';
+            
+            const dx = (Math.random() - 0.5) * 2;
+            const dy = (Math.random() - 0.5) * 2;
+            
+            spark.style.left = x + 'px';
+            spark.style.top = y + 'px';
+            spark.style.setProperty('--dx', dx);
+            spark.style.setProperty('--dy', dy);
+            
+            game.dom.sparkContainer.appendChild(spark);
+            
+            setTimeout(() => {
+                if(spark.parentNode) spark.remove();
+            }, 600);
+        }
+
+        // 停止火花效果
+        function stopSparkEffect() {
+            if (game.sparkInterval) clearInterval(game.sparkInterval);
+            game.dom.sparkContainer.innerHTML = '';
+        }
+
+        // 完成焊点焊接
+        function completeSolderPoint(point) {
+            if (game.progressInterval) {
+                clearInterval(game.progressInterval);
+                game.progressInterval = null;
+            }
+            
+            point.classList.remove('melting');
+            point.classList.add('melted');
+            
+            game.completedPoints += 1;
+            game.dom.completedPoints.textContent = game.completedPoints;
+            
+            if (game.completedPoints >= game.totalPoints) {
+                endGame(true);
+            }
+        }
+
+        // 开始游戏
+        function startGame() {
+            game.isPlaying = true;
+            game.timeLeft = 60;
+            game.completedPoints = 0;
+            game.isIronHot = false;
+            game.heatProgress = 0;
+            
+            game.dom.timeLeft.textContent = game.timeLeft;
+            game.dom.completedPoints.textContent = 0;
+            game.dom.startScreen.style.display = 'none';
+            game.dom.gameOverScreen.style.display = 'none';
+            
+            initSolderPoints();
+            
+            game.timerInterval = setInterval(() => {
+                game.timeLeft -= 1;
+                game.dom.timeLeft.textContent = game.timeLeft;
+                
+                if (game.timeLeft <= 0) {
+                    endGame(false);
+                }
+            }, 1000);
+        }
+
+        // 结束游戏
+        function endGame(isWin) {
+            game.isPlaying = false;
+            
+            clearInterval(game.timerInterval);
+            clearInterval(game.heatProgressInterval);
+            clearInterval(game.progressInterval);
+            stopSparkEffect();
+            
+            game.dom.ironTip.classList.remove('hot', 'aiming');
+            game.dom.heatProgressContainer.style.display = 'none';
+            
+            game.dom.gameOverScreen.style.display = 'flex';
+            if (isWin) {
+                game.dom.gameOverText.textContent = '训练完成！';
+                game.dom.scoreText.textContent = `恭喜！你成功焊接了 ${game.completedPoints}/${game.totalPoints} 个焊点`;
+            } else {
+                game.dom.gameOverText.textContent = '时间到！';
+                game.dom.scoreText.textContent = `你完成了 ${game.completedPoints}/${game.totalPoints} 个焊点`;
+            }
+        }
+
+        // 重置游戏
+        function resetGame() {
+            stopHeating();
+            clearInterval(game.timerInterval);
+            game.dom.startScreen.style.display = 'flex';
+        }
+
+        // 事件监听
+        function bindEvents() {
+            game.dom.container.addEventListener('mousemove', moveIron);
+            game.dom.container.addEventListener('mousedown', startHeating);
+            game.dom.container.addEventListener('mouseup', stopHeating);
+            game.dom.container.addEventListener('mouseleave', stopHeating);
+            
+            // 移动端支持
+            game.dom.container.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                moveIron(touch);
+            });
+            
+            game.dom.container.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                startHeating();
+            });
+            
+            game.dom.container.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                stopHeating();
+            });
+            
+            game.dom.startBtn.addEventListener('click', startGame);
+            game.dom.restartBtn.addEventListener('click', resetGame);
+        }
+
+        // 初始化
+        function init() {
+            initSolderPoints();
+            bindEvents();
+        }
+
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
