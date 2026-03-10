@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Circuit: Cyberpunk Builder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+
+        :root {
+            --neon-blue: #00f3ff;
+            --neon-pink: #ff00ff;
+            --neon-green: #00ff9d;
+            --neon-yellow: #ffee00;
+            --dark-bg: #050505;
+            --panel-bg: rgba(10, 10, 15, 0.95);
+        }
+
+        body {
+            background-color: var(--dark-bg);
+            color: #e0e0e0;
+            font-family: 'Share Tech Mono', monospace;
+            overflow: hidden;
+            background-image: 
+                linear-gradient(rgba(0, 243, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 243, 255, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        .cyber-font {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        /* CRT Effect */
+        .crt::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        .glow-text {
+            text-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
+        }
+
+        .component-card {
+            background: linear-gradient(135deg, rgba(20, 20, 30, 0.9), rgba(10, 10, 15, 0.9));
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .component-card::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, var(--neon-blue), transparent, var(--neon-pink));
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .component-card:hover::before {
+            opacity: 1;
+        }
+
+        .component-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.4);
+            border-color: var(--neon-blue);
+        }
+
+        .component-card.selected {
+            border-color: var(--neon-green);
+            box-shadow: 0 0 15px rgba(0, 255, 157, 0.5);
+            background: rgba(0, 255, 157, 0.1);
+        }
+
+        .slot {
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .slot.occupied {
+            background: rgba(0, 243, 255, 0.1);
+            border-color: var(--neon-blue);
+            box-shadow: inset 0 0 20px rgba(0, 243, 255, 0.2);
+        }
+
+        .slot.occupied::after {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border: 2px solid var(--neon-blue);
+            border-radius: 8px;
+            opacity: 0.5;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.02); }
+        }
+
+        .circuit-path {
+            stroke-dasharray: 10;
+            animation: dash 20s linear infinite;
+            filter: drop-shadow(0 0 5px currentColor);
+        }
+
+        @keyframes dash {
+            to { stroke-dashoffset: -1000; }
+        }
+
+        .flow-particle {
+            filter: drop-shadow(0 0 8px currentColor);
+        }
+
+        .stats-bar {
+            background: linear-gradient(90deg, transparent, rgba(0, 243, 255, 0.2), transparent);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a0a0f; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #00f3ff; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00c4cc; 
+        }
+
+        .delete-mode {
+            cursor: crosshair !important;
+        }
+
+        .delete-mode .slot {
+            cursor: crosshair !important;
+        }
+
+        .slot:hover .delete-indicator {
+            opacity: 1;
+        }
+
+        .delete-indicator {
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .btn-delete {
+            background: linear-gradient(135deg, rgba(220, 38, 38, 0.2), rgba(153, 27, 27, 0.2));
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            color: #ef4444;
+            transition: all 0.3s;
+        }
+
+        .btn-delete:hover {
+            background: rgba(220, 38, 38, 0.4);
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+            border-color: #ef4444;
+        }
+
+        .btn-delete.active {
+            background: rgba(220, 38, 38, 0.6);
+            box-shadow: 0 0 30px rgba(239, 68, 68, 0.8);
+            animation: dangerPulse 1s infinite;
+        }
+
+        @keyframes dangerPulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.5); }
+            50% { box-shadow: 0 0 40px rgba(239, 68, 68, 0.9); }
+        }
+
+        .warning-text {
+            color: #ef4444;
+            text-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col crt">
+
+    <!-- Header -->
+    <header class="h-16 border-b border-cyan-500/30 bg-black/80 flex items-center justify-between px-6 relative z-20 backdrop-blur-md">
+        <div class="flex items-center gap-4">
+            <div class="w-10 h-10 bg-cyan-500/20 rounded-lg flex items-center justify-center border border-cyan-400 animate-pulse">
+                <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+            </div>
+            <div>
+                <h1 class="cyber-font text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 glow-text">
+                    NEON CIRCUIT
+                </h1>
+                <div class="text-xs text-cyan-600 tracking-widest">SYSTEM ARCHITECT v2.0</div>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-6">
+            <div class="text-right">
+                <div class="text-xs text-gray-500">SYSTEM INTEGRITY</div>
+                <div id="integrity-display" class="text-xl font-bold text-green-400 cyber-font">100%</div>
+            </div>
+            <div class="h-8 w-px bg-cyan-500/30"></div>
+            <div class="text-right">
+                <div class="text-xs text-gray-500">POWER OUTPUT</div>
+                <div id="power-display" class="text-xl font-bold text-cyan-400 cyber-font">0 MW</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex overflow-hidden relative z-10">
+        
+        <!-- Left Panel: Component Library -->
+        <aside class="w-80 bg-black/90 border-r border-cyan-500/30 flex flex-col">
+            <div class="p-4 border-b border-cyan-500/30">
+                <h2 class="cyber-font text-lg text-cyan-400 mb-1">COMPONENTS</h2>
+                <p class="text-xs text-gray-500">Select module to deploy</p>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-4 space-y-3" id="component-list">
+                <!-- Components injected by JS -->
+            </div>
+
+            <div class="p-4 border-t border-cyan-500/30 bg-cyan-900/10">
+                <div class="text-xs text-cyan-600 mb-2">SELECTED MODULE</div>
+                <div id="selected-info" class="text-sm text-gray-300">
+                    <span class="text-gray-600 italic">None selected</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Center: Build Grid -->
+        <section class="flex-1 flex flex-col relative bg-gray-900/50">
+            <!-- Toolbar -->
+            <div class="h-12 border-b border-cyan-500/20 flex items-center justify-between px-4 bg-black/40">
+                <div class="flex items-center gap-4 text-sm">
+                    <span class="text-gray-500">GRID SIZE:</span>
+                    <span class="text-cyan-400 cyber-font">8×8</span>
+                    <span class="text-gray-600">|</span>
+                    <span class="text-gray-500">SLOTS:</span>
+                    <span id="slot-count" class="text-cyan-400 cyber-font">0/64</span>
+                </div>
+                
+                <div class="flex items-center gap-2">
+                    <button onclick="clearGrid()" class="px-4 py-1.5 text-xs border border-red-500/50 text-red-400 hover:bg-red-500/20 transition-colors rounded">
+                        CLEAR ALL
+                    </button>
+                    <button onclick="toggleDeleteMode()" id="delete-btn" class="btn-delete px-4 py-1.5 text-xs rounded flex items-center gap-2 font-bold">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                        DEMOLITION MODE
+                    </button>
+                </div>
+            </div>
+
+            <!-- Grid Container -->
+            <div class="flex-1 flex items-center justify-center p-8 overflow-auto">
+                <div id="grid-container" class="relative">
+                    <!-- SVG Layer for Connections -->
+                    <svg id="circuit-svg" class="absolute inset-0 pointer-events-none z-10" style="width: 100%; height: 100%;">
+                        <defs>
+                            <linearGradient id="flow-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" style="stop-color:#00f3ff;stop-opacity:0" />
+                                <stop offset="50%" style="stop-color:#00f3ff;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#00f3ff;stop-opacity:0" />
+                            </linearGradient>
+                            <filter id="glow">
+                                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                                <feMerge>
+                                    <feMergeNode in="coloredBlur"/>
+                                    <feMergeNode in="SourceGraphic"/>
+                                </feMerge>
+                            </filter>
+                        </defs>
+                    </svg>
+                    
+                    <!-- Grid Slots -->
+                    <div id="grid" class="grid gap-2 relative z-20">
+                        <!-- Grid cells injected by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Bar -->
+            <div class="h-8 bg-black/60 border-t border-cyan-500/20 flex items-center px-4 text-xs justify-between">
+                <div id="status-text" class="text-cyan-600">SYSTEM READY // WAITING FOR INPUT</div>
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2">
+                        <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                        <span class="text-gray-500">ONLINE</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Panel: Circuit Analysis -->
+        <aside class="w-96 bg-black/90 border-l border-cyan-500/30 flex flex-col">
+            <div class="p-4 border-b border-cyan-500/30">
+                <h2 class="cyber-font text-lg text-purple-400 mb-1">CIRCUIT ANALYSIS</h2>
+                <p class="text-xs text-gray-500">Real-time system diagnostics</p>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-4 space-y-4">
+                <!-- Efficiency Meter -->
+                <div class="bg-gray-900/50 rounded-lg p-4 border border-cyan-500/20">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm text-gray-400">EFFICIENCY RATING</span>
+                        <span id="efficiency-value" class="text-2xl font-bold text-cyan-400 cyber-font">0%</span>
+                    </div>
+                    <div class="h-2 bg-gray-800 rounded-full overflow-hidden">
+                        <div id="efficiency-bar" class="h-full bg-gradient-to-r from-cyan-500 to-purple-500 transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Active Connections -->
+                <div class="bg-gray-900/50 rounded-lg p-4 border border-cyan-500/20">
+                    <h3 class="text-sm text-cyan-400 mb-3 cyber-font">ACTIVE CIRCUITS</h3>
+                    <div id="connections-list" class="space-y-2 text-sm">
+                        <div class="text-gray-600 italic text-center py-4">No active connections</div>
+                    </div>
+                </div>
+
+                <!-- Component Breakdown -->
+                <div class="bg-gray-900/50 rounded-lg p-4 border border-cyan-500/20">
+                    <h3 class="text-sm text-purple-400 mb-3 cyber-font">LOADOUT</h3>
+                    <div id="breakdown-list" class="space-y-2">
+                        <!-- Breakdown items injected by JS -->
+                    </div>
+                </div>
+
+                <!-- Alerts -->
+                <div id="alerts-panel" class="hidden bg-red-900/20 border border-red-500/50 rounded-lg p-4">
+                    <h3 class="text-sm text-red-400 mb-2 cyber-font flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                        SYSTEM ALERTS
+                    </h3>
+                    <ul id="alerts-list" class="text-xs text-red-300 space-y-1">
+                    </ul>
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-cyan-500/30">
+                <button onclick="optimizeCircuit()" class="w-full py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold rounded-lg transition-all transform hover:scale-[1.02] cyber-font tracking-wider">
+                    OPTIMIZE CIRCUIT
+                </button>
+            </div>
+        </aside>
+    </main>
+
+    <script>
+        // Component Database
+        const components = [
+            {
+                id: 'cpu',
+                name: 'Quantum Processor',
+                type: 'core',
+                icon: '◈',
+                color: '#00f3ff',
+                power: 50,
+                efficiency: 0.9,
+                desc: 'High-performance computing core',
+                connections: 4
+            },
+            {
+                id: 'gpu',
+                name: 'Neural GPU',
+                type: 'core',
+                icon: '◉',
+                color: '#ff00ff',
+                power: 80,
+                efficiency: 0.75,
+                desc: 'Parallel processing unit',
+                connections: 4
+            },
+            {
+                id: 'ram',
+                name: 'Cryo-RAM',
+                type: 'memory',
+                icon: '▣',
+                color: '#00ff9d',
+                power: 10,
+                efficiency: 0.95,
+                desc: 'Ultra-fast memory module',
+                connections: 2
+            },
+            {
+                id: 'storage',
+                name: 'SSD Core',
+                type: 'storage',
+                icon: '▦',
+                color: '#ffee00',
+                power: 15,
+                efficiency: 0.85,
+                desc: 'Solid-state storage array',
+                connections: 2
+            },
+            {
+                id: 'cooling',
+                name: 'Liquid Cooler',
+                type: 'cooling',
+                icon: '❄',
+                color: '#00ccff',
+                power: -20,
+                efficiency: 1.2,
+                desc: 'Thermal management system',
+                connections: 2
+            },
+            {
+                id: 'power',
+                name: 'Fusion Cell',
+                type: 'power',
+                icon: '⚡',
+                color: '#ff6600',
+                power: 100,
+                efficiency: 0.8,
+                desc: 'High-density power source',
+                connections: 2
+            },
+            {
+                id: 'network',
+                name: 'Link Module',
+                type: 'network',
+                icon: '☎',
+                color: '#ff0066',
+                power: 25,
+                efficiency: 0.9,
+                desc: 'Network interface controller',
+                connections: 4
+            }
+        ];
+
+        // Grid Configuration
+        const GRID_SIZE = 8;
+        let grid = Array(GRID_SIZE * GRID_SIZE).fill(null);
+        let selectedComponent = null;
+        let deleteMode = false;
+        let circuitConnections = [];
+
+        // Initialize
+        function init() {
+            renderComponentList();
+            renderGrid();
+            updateAnalysis();
+        }
+
+        // Render Component Library
+        function renderComponentList() {
+            const container = document.getElementById('component-list');
+            components.forEach(comp => {
+                const div = document.createElement('div');
+                div.className = `component-card rounded-lg p-4 cursor-pointer ${selectedComponent === comp.id ? 'selected' : ''}`;
+                div.onclick = () => selectComponent(comp.id);
+                div.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-lg bg-gray-800 flex items-center justify-center text-2xl" style="color: ${comp.color}; border: 1px solid ${comp.color}40;">
+                            ${comp.icon}
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-bold text-gray-200 text-sm">${comp.name}</div>
+                            <div class="text-xs text-gray-500 mt-1">${comp.desc}</div>
+                            <div class="flex items-center gap-3 mt-2 text-xs">
+                                <span style="color: ${comp.color}">${comp.power > 0 ? '+' : ''}${comp.power}W</span>
+                                <span class="text-gray-600">${comp.connections}-WAY</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // Select Component
+        function selectComponent(id) {
+            if (deleteMode) toggleDeleteMode(); // Exit delete mode when selecting component
+            selectedComponent = selectedComponent === id ? null : id;
+            const comp = components.find(c => c.id === id);
+            
+            document.getElementById('selected-info').innerHTML = selectedComponent ? `
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl" style="color: ${comp.color}">${comp.icon}</span>
+                    <div>
+                        <div class="font-bold text-cyan-400">${comp.name}</div>
+                        <div class="text-xs text-gray-500">Click grid slot to deploy</div>
+                    </div>
+                </div>
+            ` : '<span class="text-gray-600 italic">None selected</span>';
+            
+            renderComponentList();
+        }
+
+        // Toggle Delete Mode
+        function toggleDeleteMode() {
+            deleteMode = !deleteMode;
+            selectedComponent = null;
+            
+            const btn = document.getElementById('delete-btn');
+            const body = document.body;
+            const statusText = document.getElementById('status-text');
+            
+            if (deleteMode) {
+                btn.classList.add('active');
+                body.classList.add('delete-mode');
+                statusText.innerHTML = '<span class="warning-text">⚠ DEMOLITION MODE ACTIVE - CLICK COMPONENTS TO DELETE</span>';
+                document.getElementById('selected-info').innerHTML = '<span class="text-red-400 font-bold">⚠ DELETE MODE - Click occupied slots to remove</span>';
+            } else {
+                btn.classList.remove('active');
+                body.classList.remove('delete-mode');
+                statusText.textContent = 'SYSTEM READY // WAITING FOR INPUT';
+                document.getElementById('selected-info').innerHTML = '<span class="text-gray-600 italic">None selected</span>';
+            }
+            
+            renderComponentList();
+            renderGrid(); // Re-render to show delete indicators
+        }
+
+        // Render Grid
+        function renderGrid() {
+            const gridEl = document.getElementById('grid');
+            gridEl.innerHTML = '';
+            gridEl.style.gridTemplateColumns = `repeat(${GRID_SIZE}, 1fr)`;
+            
+            grid.forEach((cell, index) => {
+                const slot = document.createElement('div');
+                const x = index % GRID_SIZE;
+                const y = Math.floor(index / GRID_SIZE);
+                
+                slot.className = `slot w-16 h-16 bg-gray-800/50 border-2 border-cyan-500/30 rounded-lg flex items-center justify-center cursor-pointer hover:border-cyan-400 transition-colors ${cell ? 'occupied' : ''}`;
+                slot.onclick = () => handleSlotClick(index);
+                
+                if (cell) {
+                    const comp = components.find(c => c.id === cell);
+                    slot.innerHTML = `
+                        <div class="text-3xl" style="color: ${comp.color}; filter: drop-shadow(0 0 8px ${comp.color});">
+                            ${comp.icon}
+                        </div>
+                        ${deleteMode ? `
+                            <div class="delete-indicator absolute inset-0 bg-red-500/30 border-2 border-red-500 rounded-lg flex items-center justify-center">
+                                <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </div>
+                        ` : ''}
+                    `;
+                } else {
+                    slot.innerHTML = `<div class="text-xs text-gray-700 font-mono">${x},${y}</div>`;
+                }
+                
+                gridEl.appendChild(slot);
+            });
+            
+            document.getElementById('slot-count').textContent = `${grid.filter(c => c).length}/${GRID_SIZE * GRID_SIZE}`;
+        }
+
+        // Handle Slot Click
+        function handleSlotClick(index) {
+            if (deleteMode) {
+                // Delete mode: remove component if present
+                if (grid[index]) {
+                    grid[index] = null;
+                    calculateConnections();
+                    renderGrid();
+                    updateAnalysis();
+                    
+                    // Visual feedback
+                    const statusText = document.getElementById('status-text');
+                    statusText.innerHTML = '<span class="text-red-400">COMPONENT REMOVED // CIRCUIT BROKEN</span>';
+                    setTimeout(() => {
+                        if (deleteMode) {
+                            statusText.innerHTML = '<span class="warning-text">⚠ DEMOLITION MODE ACTIVE - CLICK COMPONENTS TO DELETE</span>';
+                        } else {
+                            statusText.textContent = 'SYSTEM READY // WAITING FOR INPUT';
+                        }
+                    }, 1000);
+                }
+            } else {
+                // Normal mode: place component
+                if (selectedComponent && !grid[index]) {
+                    grid[index] = selectedComponent;
+                    calculateConnections();
+                    renderGrid();
+                    updateAnalysis();
+                    
+                    // Visual feedback
+                    document.getElementById('status-text').textContent = 'COMPONENT DEPLOYED // CIRCUIT UPDATED';
+                }
+            }
+        }
+
+        // Clear All
+        function clearGrid() {
+            if (confirm('WARNING: This will erase all deployed components. Continue?')) {
+                grid = Array(GRID_SIZE * GRID_SIZE).fill(null);
+                calculateConnections();
+                renderGrid();
+                updateAnalysis();
+                document.getElementById('status-text').textContent = 'GRID CLEARED // SYSTEM RESET';
+            }
+        }
+
+        // Calculate Circuit Connections
+        function calculateConnections() {
+            circuitConnections = [];
+            const occupied = [];
+            
+            grid.forEach((cell, index) => {
+                if (cell) {
+                    const x = index % GRID_SIZE;
+                    const y = Math.floor(index / GRID_SIZE);
+                    occupied.push({ index, x, y, type: cell });
+                }
+            });
+            
+            // Simple proximity connection logic
+            occupied.forEach((cell, i) => {
+                occupied.forEach((other, j) => {
+                    if (i >= j) return;
+                    const dist = Math.abs(cell.x - other.x) + Math.abs(cell.y - other.y);
+                    if (dist === 1) { // Adjacent
+                        circuitConnections.push({
+                            from: cell,
+                            to: other,
+                            distance: dist
+                        });
+                    }
+                });
+            });
+        }
+
+        // Update Analysis Panel
+        function updateAnalysis() {
+            const occupied = grid.filter(c => c).length;
+            const compCounts = {};
+            let totalPower = 0;
+            let totalEfficiency = 0;
+            
+            grid.forEach(cell => {
+                if (cell) {
+                    compCounts[cell] = (compCounts[cell] || 0) + 1;
+                    const comp = components.find(c => c.id === cell);
+                    totalPower += comp.power;
+                    totalEfficiency += comp.efficiency;
+                }
+            });
+            
+            // Update displays
+            const avgEfficiency = occupied > 0 ? (totalEfficiency / occupied * 100).toFixed(1) : 0;
+            document.getElementById('efficiency-value').textContent = avgEfficiency + '%';
+            document.getElementById('efficiency-bar').style.width = avgEfficiency + '%';
+            document.getElementById('power-display').textContent = totalPower + ' MW';
+            
+            // Integrity check
+            const integrity = Math.max(0, 100 - (occupied > 0 ? (circuitConnections.length / occupied * 10) : 0));
+            document.getElementById('integrity-display').textContent = integrity.toFixed(0) + '%';
+            document.getElementById('integrity-display').className = `text-xl font-bold cyber-font ${integrity > 80 ? 'text-green-400' : integrity > 50 ? 'text-yellow-400' : 'text-red-400'}`;
+            
+            // Connections list
+            const connList = document.getElementById('connections-list');
+            if (circuitConnections.length === 0) {
+                connList.innerHTML = '<div class="text-gray-600 italic text-center py-4">No active connections</div>';
+            } else {
+                connList.innerHTML = circuitConnections.map((conn, i) => `
+                    <div class="flex items-center justify-between p-2 bg-black/30 rounded border-l-2 border-cyan-500">
+                        <span class="text-cyan-400 text-xs">LINK-${String(i+1).padStart(2, '0')}</span>
+                        <span class="text-gray-500 text-xs">${conn.from.type.toUpperCase()} ↔ ${conn.to.type.toUpperCase()}</span>
+                    </div>
+                `).join('');
+            }
+            
+            // Breakdown
+            const breakdown = document.getElementById('breakdown-list');
+            breakdown.innerHTML = Object.entries(compCounts).map(([id, count]) => {
+                const comp = components.find(c => c.id === id);
+                return `
+                    <div class="flex items-center justify-between text-sm p-2 bg-black/20 rounded">
+                        <div class="flex items-center gap-2">
+                            <span style="color: ${comp.color}">${comp.icon}</span>
+                            <span class="text-gray-300">${comp.name}</span>
+                        </div>
+                        <span class="text-cyan-400 font-bold">×${count}</span>
+                    </div>
+                `;
+            }).join('');
+            
+            // Draw connections
+            drawConnections();
+            
+            // Check alerts
+            checkAlerts(totalPower, occupied);
+        }
+
+        // Draw SVG Connections
+        function drawConnections() {
+            const svg = document.getElementById('circuit-svg');
+            // Clear existing paths except defs
+            const defs = svg.querySelector('defs');
+            svg.innerHTML = '';
+            svg.appendChild(defs);
+            
+            const gridEl = document.getElementById('grid');
+            const slots = gridEl.children;
+            
+            circuitConnections.forEach((conn, i) => {
+                const fromSlot = slots[conn.from.index];
+                const toSlot = slots[conn.to.index];
+                
+                if (!fromSlot || !toSlot) return;
+                
+                const fromRect = fromSlot.getBoundingClientRect();
+                const toRect = toSlot.getBoundingClientRect();
+                const svgRect = svg.getBoundingClientRect();
+                
+                const x1 = fromRect.left + fromRect.width/2 - svgRect.left;
+                const y1 = fromRect.top + fromRect.height/2 - svgRect.top;
+                const x2 = toRect.left + toRect.width/2 - svgRect.left;
+                const y2 = toRect.top + toRect.height/2 - svgRect.top;
+                
+                // Create path
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', `M ${x1} ${y1} L ${x2} ${y2}`);
+                path.setAttribute('stroke', '#00f3ff');
+                path.setAttribute('stroke-width', '2');
+                path.setAttribute('fill', 'none');
+                path.setAttribute('class', 'circuit-path');
+                path.setAttribute('opacity', '0.6');
+                path.setAttribute('filter', 'url(#glow)');
+                
+                svg.appendChild(path);
+                
+                // Add flow particle
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('r', '3');
+                circle.setAttribute('fill', '#00f3ff');
+                circle.setAttribute('class', 'flow-particle');
+                
+                const animateMotion = document.createElementNS('http://www.w3.org/2000/svg', 'animateMotion');
+                animateMotion.setAttribute('dur', '2s');
+                animateMotion.setAttribute('repeatCount', 'indefinite');
+                animateMotion.setAttribute('path', `M ${x1} ${y1} L ${x2} ${y2}`);
+                
+                circle.appendChild(animateMotion);
+                svg.appendChild(circle);
+            });
+        }
+
+        // Check System Alerts
+        function checkAlerts(power, occupied) {
+            const alertsPanel = document.getElementById('alerts-panel');
+            const alertsList = document.getElementById('alerts-list');
+            const alerts = [];
+            
+            if (power > 200) alerts.push('WARNING: Power consumption exceeds safe limits');
+            if (power < 0) alerts.push('INFO: System generating excess power');
+            if (occupied > 0 && circuitConnections.length === 0) alerts.push('WARNING: Components isolated - No data flow detected');
+            if (occupied > 20) alerts.push('NOTICE: High component density may affect cooling');
+            
+            if (alerts.length > 0) {
+                alertsPanel.classList.remove('hidden');
+                alertsList.innerHTML = alerts.map(a => `<li>• ${a}</li>`).join('');
+            } else {
+                alertsPanel.classList.add('hidden');
+            }
+        }
+
+        // Optimize Circuit
+        function optimizeCircuit() {
+            alert('OPTIMIZATION ALGORITHM EXECUTED\n\nRecommended actions:\n• Add cooling units near high-power components\n• Connect isolated modules\n• Balance power distribution\n\nEfficiency improved by 15%');
+        }
+
+        // Handle window resize for SVG redraw
+        window.addEventListener('resize', () => {
+            drawConnections();
+        });
+
+        // Start
+        init();
+    </script>
+</body>
+</html>
