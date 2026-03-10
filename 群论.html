@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>群论迷宫：对称变换</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+        
+        .game-container {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 900px;
+            width: 100%;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2em;
+            background: linear-gradient(45deg, #00f260, #0575e6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #a0a0a0;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+        }
+        
+        .info-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .info-card {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 3px solid #00f260;
+        }
+        
+        .info-card h3 {
+            font-size: 0.8em;
+            color: #888;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+        
+        .info-card .value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #fff;
+        }
+        
+        .group-visual {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .group-visual h3 {
+            margin-bottom: 10px;
+            color: #00f260;
+            font-size: 0.9em;
+        }
+        
+        .cayley-table {
+            display: inline-grid;
+            grid-template-columns: repeat(5, 40px);
+            gap: 2px;
+            font-size: 0.8em;
+        }
+        
+        .cayley-cell {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+        
+        .cayley-cell.header {
+            background: rgba(0, 242, 96, 0.3);
+            font-weight: bold;
+        }
+        
+        .cayley-cell.highlight {
+            background: rgba(0, 242, 96, 0.5);
+            transform: scale(1.1);
+            box-shadow: 0 0 10px rgba(0, 242, 96, 0.5);
+        }
+        
+        #gameCanvas {
+            display: block;
+            margin: 0 auto 20px;
+            border: 2px solid rgba(0, 242, 96, 0.3);
+            border-radius: 10px;
+            background: #1a1a2e;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .control-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .control-btn:active {
+            transform: translateY(0);
+        }
+        
+        .control-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: 0.5s;
+        }
+        
+        .control-btn:hover::before {
+            left: 100%;
+        }
+        
+        .control-btn.identity {
+            background: linear-gradient(135deg, #11998e, #38ef7d);
+        }
+        
+        .control-btn.inverse {
+            background: linear-gradient(135deg, #fc466b, #3f5efb);
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+            font-size: 0.85em;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+        
+        .message {
+            text-align: center;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 8px;
+            font-weight: bold;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .message.success {
+            background: rgba(0, 242, 96, 0.2);
+            color: #00f260;
+        }
+        
+        .message.error {
+            background: rgba(252, 70, 107, 0.2);
+            color: #fc466b;
+        }
+        
+        .message.info {
+            background: rgba(102, 126, 234, 0.2);
+            color: #667eea;
+        }
+        
+        .level-indicator {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00f260, #0575e6);
+            transition: width 0.3s;
+        }
+        
+        .theory-box {
+            background: rgba(255, 255, 255, 0.05);
+            border-left: 3px solid #ffd700;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 0 10px 10px 0;
+            font-size: 0.9em;
+            line-height: 1.6;
+        }
+        
+        .theory-box h4 {
+            color: #ffd700;
+            margin-bottom: 8px;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>群论迷宫：对称变换</h1>
+        <div class="subtitle">通过群论操作探索对称性的奥秘</div>
+        
+        <div class="level-indicator">
+            <div>当前关卡: <span id="levelNum">1</span> / 5</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressBar" style="width: 20%"></div>
+            </div>
+        </div>
+        
+        <div class="info-panel">
+            <div class="info-card">
+                <h3>当前操作</h3>
+                <div class="value" id="currentOp">e (单位元)</div>
+            </div>
+            <div class="info-card">
+                <h3>操作序列</h3>
+                <div class="value" id="opSequence" style="font-size: 0.9em;">e</div>
+            </div>
+            <div class="info-card">
+                <h3>步数</h3>
+                <div class="value" id="stepCount">0</div>
+            </div>
+            <div class="info-card">
+                <h3>群元素阶</h3>
+                <div class="value" id="elementOrder">1</div>
+            </div>
+        </div>
+        
+        <div class="group-visual">
+            <h3>克莱因四元群 V₄ 乘法表 (Cayley表)</h3>
+            <div class="cayley-table" id="cayleyTable">
+                <!-- 由JS生成 -->
+            </div>
+        </div>
+        
+        <canvas id="gameCanvas" width="600" height="400"></canvas>
+        
+        <div class="controls">
+            <button class="control-btn identity" onclick="game.applyOperation('e')" title="单位元：保持不变">
+                e (单位元)
+            </button>
+            <button class="control-btn" onclick="game.applyOperation('a')" title="水平反射：左右镜像">
+                a (水平反射)
+            </button>
+            <button class="control-btn" onclick="game.applyOperation('b')" title="垂直反射：上下镜像">
+                b (垂直反射)
+            </button>
+            <button class="control-btn inverse" onclick="game.applyOperation('c')" title="180°旋转：点反射">
+                c (180°旋转)
+            </button>
+        </div>
+        
+        <div class="message info" id="message">
+            欢迎来到群论迷宫！使用群操作移动角色到达绿色目标点。
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #00f260;"></div>
+                <span>玩家 (随操作变换形态)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ffd700;"></div>
+                <span>目标点</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #fc466b;"></div>
+                <span>障碍物</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #667eea;"></div>
+                <span>传送门 (对称点)</span>
+            </div>
+        </div>
+        
+        <div class="theory-box">
+            <h4>群论知识小贴士</h4>
+            <p id="theoryText">
+                <strong>克莱因四元群 V₄</strong> 是最小的非循环群，包含四个元素 {e, a, b, c}。
+                每个元素都是自身的逆元（a² = b² = c² = e），且满足交换律。
+                这个群描述了矩形的对称性：e(恒等)、a(水平翻转)、b(垂直翻转)、c(旋转180°)。
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // 群论核心：克莱因四元群 V₄ 的乘法表
+        const GROUP_TABLE = {
+            'e': { 'e': 'e', 'a': 'a', 'b': 'b', 'c': 'c' },
+            'a': { 'e': 'a', 'a': 'e', 'b': 'c', 'c': 'b' },
+            'b': { 'e': 'b', 'a': 'c', 'b': 'e', 'c': 'a' },
+            'c': { 'e': 'c', 'a': 'b', 'b': 'a', 'c': 'e' }
+        };
+        
+        const OPERATIONS = {
+            'e': { name: '单位元', desc: '保持不变', color: '#00f260' },
+            'a': { name: '水平反射', desc: '左右镜像', color: '#667eea' },
+            'b': { name: '垂直反射', desc: '上下镜像', color: '#764ba2' },
+            'c': { name: '180°旋转', desc: '点反射', color: '#fc466b' }
+        };
+        
+        class GroupTheoryGame {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.level = 1;
+                this.currentElement = 'e';
+                this.operationHistory = ['e'];
+                this.steps = 0;
+                this.playerPos = { x: 1, y: 1 };
+                this.targetPos = { x: 8, y: 6 };
+                this.portalPos = { x: 4, y: 3 }; // 传送门位置
+                this.animationFrame = 0;
+                
+                // 关卡地图 (0:空地, 1:墙, 2:目标, 3:传送门)
+                this.maps = [
+                    // Level 1: 基础对称
+                    [
+                        [1,1,1,1,1,1,1,1,1,1],
+                        [1,0,0,0,0,0,0,0,2,1],
+                        [1,0,1,1,0,0,1,1,0,1],
+                        [1,0,1,3,0,0,3,1,0,1],
+                        [1,0,0,0,0,0,0,0,0,1],
+                        [1,0,1,1,0,0,1,1,0,1],
+                        [1,0,0,0,0,0,0,0,0,1],
+                        [1,1,1,1,1,1,1,1,1,1]
+                    ],
+                    // Level 2: 需要组合操作
+                    [
+                        [1,1,1,1,1,1,1,1,1,1,1,1],
+                        [1,0,0,0,1,0,0,0,0,0,2,1],
+                        [1,0,1,0,1,0,1,1,1,1,0,1],
+                        [1,0,1,0,0,0,0,0,3,1,0,1],
+                        [1,0,1,1,1,1,1,0,1,1,0,1],
+                        [1,0,0,0,0,0,0,0,0,0,0,1],
+                        [1,1,1,1,1,1,1,1,1,1,1,1]
+                    ],
+                    // Level 3: 复杂迷宫
+                    [
+                        [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+                        [1,0,0,0,0,1,0,0,0,0,0,0,2,1],
+                        [1,0,1,1,0,1,0,1,1,1,1,1,0,1],
+                        [1,0,1,3,0,0,0,0,0,0,3,1,0,1],
+                        [1,0,1,1,1,1,0,1,1,1,1,1,0,1],
+                        [1,0,0,0,0,0,0,0,0,0,0,0,0,1],
+                        [1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+                    ],
+                    // Level 4: 对称陷阱
+                    [
+                        [1,1,1,1,1,1,1,1,1,1],
+                        [1,2,0,0,0,0,0,0,0,1],
+                        [1,1,1,0,1,1,0,1,1,1],
+                        [1,3,0,0,0,0,0,0,3,1],
+                        [1,1,0,1,1,1,1,0,1,1],
+                        [1,0,0,0,0,0,0,0,0,1],
+                        [1,1,1,1,1,1,1,1,1,1]
+                    ],
+                    // Level 5: 终极挑战
+                    [
+                        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+                        [1,0,0,0,1,0,0,0,0,0,1,0,0,2,1],
+                        [1,0,1,0,1,0,1,1,1,0,1,0,1,0,1],
+                        [1,0,1,0,0,0,0,3,0,0,0,0,1,0,1],
+                        [1,0,1,1,1,1,1,0,1,1,1,1,1,0,1],
+                        [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+                        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+                    ]
+                ];
+                
+                this.currentMap = this.maps[0];
+                this.init();
+            }
+            
+            init() {
+                this.renderCayleyTable();
+                this.setupEventListeners();
+                this.startAnimation();
+                this.updateUI();
+            }
+            
+            renderCayleyTable() {
+                const table = document.getElementById('cayleyTable');
+                const elements = ['e', 'a', 'b', 'c'];
+                
+                // 表头
+                table.innerHTML = '<div class="cayley-cell header"></div>';
+                elements.forEach(el => {
+                    table.innerHTML += `<div class="cayley-cell header">${el}</div>`;
+                });
+                
+                // 表格内容
+                elements.forEach(row => {
+                    table.innerHTML += `<div class="cayley-cell header">${row}</div>`;
+                    elements.forEach(col => {
+                        const result = GROUP_TABLE[row][col];
+                        table.innerHTML += `<div class="cayley-cell" id="cell-${row}-${col}">${result}</div>`;
+                    });
+                });
+            }
+            
+            setupEventListeners() {
+                // 键盘控制
+                document.addEventListener('keydown', (e) => {
+                    switch(e.key) {
+                        case '1': this.applyOperation('e'); break;
+                        case '2': this.applyOperation('a'); break;
+                        case '3': this.applyOperation('b'); break;
+                        case '4': this.applyOperation('c'); break;
+                        case 'ArrowUp': this.move(0, -1); break;
+                        case 'ArrowDown': this.move(0, 1); break;
+                        case 'ArrowLeft': this.move(-1, 0); break;
+                        case 'ArrowRight': this.move(1, 0); break;
+                    }
+                });
+            }
+            
+            applyOperation(op) {
+                // 群乘法：新元素 = 当前元素 × 操作
+                const newElement = GROUP_TABLE[this.currentElement][op];
+                
+                // 高亮Cayley表
+                document.querySelectorAll('.cayley-cell').forEach(cell => {
+                    cell.classList.remove('highlight');
+                });
+                document.getElementById(`cell-${this.currentElement}-${op}`).classList.add('highlight');
+                
+                // 应用对称变换到玩家位置
+                const oldPos = { ...this.playerPos };
+                this.playerPos = this.applySymmetry(this.playerPos, op);
+                
+                // 检查传送门
+                if (this.playerPos.x === this.portalPos.x && this.playerPos.y === this.portalPos.y) {
+                    // 传送到对称点
+                    this.playerPos = this.getSymmetricPoint(this.playerPos, newElement);
+                    this.showMessage(`传送门激活！应用${OPERATIONS[op].name}传送到对称点`, 'info');
+                }
+                
+                // 检查碰撞
+                if (this.currentMap[this.playerPos.y][this.playerPos.x] === 1) {
+                    this.playerPos = oldPos;
+                    this.showMessage('碰撞！无法穿过墙壁', 'error');
+                    return;
+                }
+                
+                this.currentElement = newElement;
+                this.operationHistory.push(op);
+                this.steps++;
+                
+                // 播放粒子效果
+                this.createParticles(this.playerPos.x * 40 + 20, this.playerPos.y * 40 + 20, OPERATIONS[op].color);
+                
+                this.updateUI();
+                this.checkWin();
+            }
+            
+            applySymmetry(pos, op) {
+                const centerX = this.currentMap[0].length / 2;
+                const centerY = this.currentMap.length / 2;
+                
+                switch(op) {
+                    case 'e': // 单位元
+                        return { ...pos };
+                    case 'a': // 水平反射 (关于垂直轴)
+                        return { x: this.currentMap[0].length - 1 - pos.x, y: pos.y };
+                    case 'b': // 垂直反射 (关于水平轴)
+                        return { x: pos.x, y: this.currentMap.length - 1 - pos.y };
+                    case 'c': // 180度旋转
+                        return { 
+                            x: this.currentMap[0].length - 1 - pos.x, 
+                            y: this.currentMap.length - 1 - pos.y 
+                        };
+                    default:
+                        return pos;
+                }
+            }
+            
+            getSymmetricPoint(pos, element) {
+                // 根据当前群元素找到对应的对称点
+                return this.applySymmetry(pos, element);
+            }
+            
+            move(dx, dy) {
+                // 传统移动（仅在当前对称状态下）
+                const newX = this.playerPos.x + dx;
+                const newY = this.playerPos.y + dy;
+                
+                if (this.currentMap[newY][newX] !== 1) {
+                    this.playerPos.x = newX;
+                    this.playerPos.y = newY;
+                    this.steps++;
+                    this.checkWin();
+                    this.updateUI();
+                }
+            }
+            
+            checkWin() {
+                if (this.playerPos.x === this.targetPos.x && this.playerPos.y === this.targetPos.y) {
+                    this.showMessage(`恭喜通关！使用了 ${this.steps} 步`, 'success');
+                    setTimeout(() => this.nextLevel(), 1500);
+                }
+            }
+            
+            nextLevel() {
+                if (this.level < 5) {
+                    this.level++;
+                    this.currentMap = this.maps[this.level - 1];
+                    this.reset();
+                    this.showMessage(`第 ${this.level} 关！难度升级`, 'info');
+                } else {
+                    this.showMessage('你已通关所有关卡！群论大师！', 'success');
+                }
+            }
+            
+            reset() {
+                this.currentElement = 'e';
+                this.operationHistory = ['e'];
+                this.steps = 0;
+                this.playerPos = { x: 1, y: 1 };
+                this.findTargetAndPortal();
+                this.updateUI();
+            }
+            
+            findTargetAndPortal() {
+                for (let y = 0; y < this.currentMap.length; y++) {
+                    for (let x = 0; x < this.currentMap[y].length; x++) {
+                        if (this.currentMap[y][x] === 2) {
+                            this.targetPos = { x, y };
+                        }
+                        if (this.currentMap[y][x] === 3) {
+                            this.portalPos = { x, y };
+                        }
+                    }
+                }
+            }
+            
+            updateUI() {
+                document.getElementById('levelNum').textContent = this.level;
+                document.getElementById('currentOp').textContent = 
+                    `${this.currentElement} (${OPERATIONS[this.currentElement].name})`;
+                document.getElementById('opSequence').textContent = 
+                    this.operationHistory.slice(-8).join(' → ');
+                document.getElementById('stepCount').textContent = this.steps;
+                document.getElementById('progressBar').style.width = `${(this.level / 5) * 100}%`;
+                
+                // 计算当前元素的阶
+                let order = 1;
+                let temp = this.currentElement;
+                while (GROUP_TABLE[temp][this.currentElement] !== 'e') {
+                    temp = GROUP_TABLE[temp][this.currentElement];
+                    order++;
+                    if (order > 4) break;
+                }
+                document.getElementById('elementOrder').textContent = order;
+                
+                // 更新理论提示
+                this.updateTheory();
+            }
+            
+            updateTheory() {
+                const theories = [
+                    "V₄ 是阿贝尔群（交换群），满足 a·b = b·a。尝试不同顺序的操作！",
+                    "每个元素的阶都是2：a² = b² = c² = e。连续应用相同操作两次回到原点！",
+                    "子群结构：V₄ 有三个2阶子群 {e,a}, {e,b}, {e,c}。",
+                    "商群 V₄/{e,a} 同构于 {e,b}。观察操作的对称性。",
+                    "V₄ 可以看作 Z₂ × Z₂（二阶循环群的直积）。"
+                ];
+                document.getElementById('theoryText').innerHTML = theories[this.level - 1] || theories[0];
+            }
+            
+            showMessage(text, type) {
+                const msg = document.getElementById('message');
+                msg.textContent = text;
+                msg.className = `message ${type}`;
+                setTimeout(() => {
+                    msg.className = 'message info';
+                    msg.textContent = '使用群操作移动，或按方向键微调位置';
+                }, 3000);
+            }
+            
+            createParticles(x, y, color) {
+                // 简化的粒子效果
+                this.particles = this.particles || [];
+                for (let i = 0; i < 8; i++) {
+                    this.particles.push({
+                        x: x,
+                        y: y,
+                        vx: (Math.random() - 0.5) * 4,
+                        vy: (Math.random() - 0.5) * 4,
+                        life: 1,
+                        color: color
+                    });
+                }
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                const tileSize = 40;
+                
+                // 清空画布
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // 绘制网格和地图
+                for (let y = 0; y < this.currentMap.length; y++) {
+                    for (let x = 0; x < this.currentMap[y].length; x++) {
+                        const tile = this.currentMap[y][x];
+                        const px = x * tileSize;
+                        const py = y * tileSize;
+                        
+                        // 网格线
+                        ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+                        ctx.strokeRect(px, py, tileSize, tileSize);
+                        
+                        if (tile === 1) {
+                            // 墙壁
+                            ctx.fillStyle = '#fc466b';
+                            ctx.fillRect(px + 2, py + 2, tileSize - 4, tileSize - 4);
+                            // 3D效果
+                            ctx.fillStyle = 'rgba(252, 70, 107, 0.3)';
+                            ctx.fillRect(px + 5, py + 5, tileSize - 4, tileSize - 4);
+                        } else if (tile === 2) {
+                            // 目标
+                            ctx.fillStyle = '#ffd700';
+                            ctx.beginPath();
+                            ctx.arc(px + tileSize/2, py + tileSize/2, 12, 0, Math.PI * 2);
+                            ctx.fill();
+                            // 脉动效果
+                            const pulse = Math.sin(this.animationFrame * 0.1) * 3;
+                            ctx.strokeStyle = '#ffd700';
+                            ctx.lineWidth = 2;
+                            ctx.beginPath();
+                            ctx.arc(px + tileSize/2, py + tileSize/2, 15 + pulse, 0, Math.PI * 2);
+                            ctx.stroke();
+                        } else if (tile === 3) {
+                            // 传送门
+                            ctx.fillStyle = '#667eea';
+                            ctx.beginPath();
+                            ctx.moveTo(px + tileSize/2, py + 5);
+                            ctx.lineTo(px + tileSize - 5, py + tileSize - 5);
+                            ctx.lineTo(px + 5, py + tileSize - 5);
+                            ctx.closePath();
+                            ctx.fill();
+                            // 旋转效果
+                            ctx.save();
+                            ctx.translate(px + tileSize/2, py + tileSize/2);
+                            ctx.rotate(this.animationFrame * 0.05);
+                            ctx.strokeStyle = '#fff';
+                            ctx.strokeRect(-10, -10, 20, 20);
+                            ctx.restore();
+                        }
+                    }
+                }
+                
+                // 绘制粒子
+                if (this.particles) {
+                    this.particles = this.particles.filter(p => {
+                        p.x += p.vx;
+                        p.y += p.vy;
+                        p.life -= 0.02;
+                        if (p.life > 0) {
+                            ctx.globalAlpha = p.life;
+                            ctx.fillStyle = p.color;
+                            ctx.fillRect(p.x - 2, p.y - 2, 4, 4);
+                            ctx.globalAlpha = 1;
+                            return true;
+                        }
+                        return false;
+                    });
+                }
+                
+                // 绘制玩家（根据当前群元素改变形态）
+                const px = this.playerPos.x * tileSize + tileSize/2;
+                const py = this.playerPos.y * tileSize + tileSize/2;
+                const color = OPERATIONS[this.currentElement].color;
+                
+                ctx.save();
+                ctx.translate(px, py);
+                
+                // 根据群元素应用视觉变换
+                switch(this.currentElement) {
+                    case 'e':
+                        // 圆形 - 单位元
+                        ctx.fillStyle = color;
+                        ctx.beginPath();
+                        ctx.arc(0, 0, 12, 0, Math.PI * 2);
+                        ctx.fill();
+                        break;
+                    case 'a':
+                        // 水平椭圆 - 水平压缩
+                        ctx.fillStyle = color;
+                        ctx.scale(1.5, 0.7);
+                        ctx.beginPath();
+                        ctx.arc(0, 0, 10, 0, Math.PI * 2);
+                        ctx.fill();
+                        break;
+                    case 'b':
+                        // 垂直椭圆 - 垂直压缩
+                        ctx.fillStyle = color;
+                        ctx.scale(0.7, 1.5);
+                        ctx.beginPath();
+                        ctx.arc(0, 0, 10, 0, Math.PI * 2);
+                        ctx.fill();
+                        break;
+                    case 'c':
+                        // 旋转的方形 - 180度旋转对称
+                        ctx.rotate(this.animationFrame * 0.1);
+                        ctx.fillStyle = color;
+                        ctx.fillRect(-10, -10, 20, 20);
+                        break;
+                }
+                
+                // 玩家标识
+                ctx.restore();
+                ctx.fillStyle = '#fff';
+                ctx.font = '12px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(this.currentElement, px, py + 4);
+                
+                this.animationFrame++;
+                requestAnimationFrame(() => this.draw());
+            }
+            
+            startAnimation() {
+                this.draw();
+            }
+        }
+        
+        // 初始化游戏
+        const game = new GroupTheoryGame();
+    </script>
+</body>
+</html>
