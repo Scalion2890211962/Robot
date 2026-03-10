@@ -1,0 +1,1354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>电脑组装大师 - 优化版（含电路连接）</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+
+        body {
+            background-color: #f0f2f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        /* 游戏容器 */
+        .game-container {
+            width: 100%;
+            max-width: 1200px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+            padding: 25px;
+            margin-bottom: 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 游戏标题栏 */
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #3498db;
+        }
+
+        .game-title {
+            color: #2c3e50;
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .difficulty-select {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .difficulty-select label {
+            color: #34495e;
+            font-weight: 500;
+        }
+
+        .difficulty-select select {
+            padding: 6px 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            background: #f8f9fa;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .difficulty-select select:hover {
+            border-color: #3498db;
+            background: white;
+        }
+
+        /* 组装区域 */
+        .assembly-area {
+            display: flex;
+            gap: 25px;
+            flex: 1;
+            min-height: 450px;
+        }
+
+        /* 部件选择区 - 优化 */
+        .parts-panel {
+            width: 280px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            border: 1px solid #dee2e6;
+            overflow-y: auto;
+            max-height: 600px;
+        }
+
+        .parts-category {
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed #e9ecef;
+        }
+
+        .category-title {
+            font-weight: bold;
+            color: #3498db;
+            margin-bottom: 10px;
+            font-size: 17px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .category-title::before {
+            content: "🔧";
+        }
+
+        .part-item {
+            padding: 10px 12px;
+            background: white;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            border: 1px solid #e9ecef;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .part-item:hover {
+            background: #e3f2fd;
+            border-color: #3498db;
+            transform: translateY(-2px);
+        }
+
+        .part-item.selected {
+            background: #3498db;
+            color: white;
+            border-color: #2980b9;
+            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+        }
+
+        .part-price {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .part-item.selected .part-price {
+            opacity: 1;
+        }
+
+        /* 部件预览弹窗 */
+        .part-preview {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            padding: 20px;
+            width: 90%;
+            max-width: 500px;
+            z-index: 100;
+            display: none;
+        }
+
+        .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #e9ecef;
+            padding-bottom: 10px;
+        }
+
+        .preview-title {
+            font-size: 18px;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        .close-preview {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #7f8c8d;
+            transition: color 0.2s;
+        }
+
+        .close-preview:hover {
+            color: #e74c3c;
+        }
+
+        .preview-content {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .preview-content p {
+            color: #34495e;
+            line-height: 1.6;
+        }
+
+        .preview-content span {
+            font-weight: 600;
+            color: #3498db;
+        }
+
+        .preview-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 99;
+            display: none;
+        }
+
+        /* 组装预览区 - 优化 */
+        .preview-area {
+            flex: 1;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            position: relative;
+            border: 1px solid #dee2e6;
+        }
+
+        .pc-case {
+            width: 320px;
+            height: 380px;
+            border: 3px solid #34495e;
+            border-radius: 10px;
+            background: #ecf0f1;
+            position: relative;
+            margin-bottom: 25px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+
+        .pc-case:hover {
+            box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+        }
+
+        .installed-part {
+            position: absolute;
+            padding: 6px 12px;
+            background: rgba(52, 152, 219, 0.9);
+            color: white;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: all 0.3s;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            z-index: 2;
+        }
+
+        .installed-part:hover {
+            background: rgba(41, 128, 185, 0.9);
+            transform: scale(1.05);
+        }
+
+        /* 新增：电路连接相关样式 */
+        .circuit-line {
+            position: absolute;
+            height: 2px;
+            background: #2ecc71;
+            z-index: 1;
+            transition: all 0.5s ease;
+            opacity: 0;
+        }
+
+        .circuit-line.connected {
+            opacity: 1;
+        }
+
+        .circuit-status {
+            background: white;
+            border-radius: 8px;
+            padding: 12px 15px;
+            width: 100%;
+            max-width: 500px;
+            margin-bottom: 15px;
+            border: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .circuit-title {
+            font-weight: 600;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .circuit-title::before {
+            content: "⚡";
+        }
+
+        .circuit-value {
+            color: #e74c3c;
+            font-weight: 700;
+        }
+
+        .circuit-value.connected {
+            color: #2ecc71;
+        }
+
+        /* 性能评分区域 */
+        .performance-score {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            width: 100%;
+            max-width: 500px;
+            margin-bottom: 20px;
+            border: 1px solid #e9ecef;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .score-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .score-title {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 16px;
+        }
+
+        .score-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #3498db;
+        }
+
+        .score-bar {
+            height: 10px;
+            background: #e9ecef;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .score-fill {
+            height: 100%;
+            background: #2ecc71;
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        /* 预算信息 */
+        .budget-info {
+            background: white;
+            border-radius: 8px;
+            padding: 12px 15px;
+            width: 100%;
+            max-width: 500px;
+            margin-bottom: 15px;
+            border: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .budget-title {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .budget-value {
+            color: #e67e22;
+            font-weight: 700;
+        }
+
+        .budget-warning {
+            color: #e74c3c;
+            font-size: 12px;
+            margin-top: 5px;
+            text-align: right;
+            display: none;
+        }
+
+        /* 操作按钮 - 优化 */
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #install-btn {
+            background: #2ecc71;
+            color: white;
+        }
+
+        #install-btn:hover {
+            background: #27ae60;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(46, 204, 113, 0.3);
+        }
+
+        #uninstall-btn {
+            background: #e74c3c;
+            color: white;
+        }
+
+        #uninstall-btn:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(231, 76, 60, 0.3);
+        }
+
+        #reset-btn {
+            background: #95a5a6;
+            color: white;
+        }
+
+        #reset-btn:hover {
+            background: #7f8c8d;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(149, 165, 166, 0.3);
+        }
+
+        /* 新增：电路连接按钮 */
+        #connect-btn {
+            background: #3498db;
+            color: white;
+        }
+
+        #connect-btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+        }
+
+        /* 提示信息 - 优化 */
+        .message {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 6px;
+            font-weight: 500;
+            text-align: center;
+            width: 100%;
+            max-width: 500px;
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+            display: block;
+        }
+
+        /* 完成状态 - 优化 */
+        .completion-status {
+            margin-top: 15px;
+            font-size: 18px;
+            color: #2c3e50;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #3498db;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        /* 通关弹窗 */
+        .completion-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 25px rgba(0,0,0,0.2);
+            padding: 30px;
+            width: 90%;
+            max-width: 600px;
+            z-index: 100;
+            display: none;
+            text-align: center;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+
+        .modal-score {
+            font-size: 36px;
+            color: #3498db;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        .modal-desc {
+            color: #34495e;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        /* 响应式适配 - 优化 */
+        @media (max-width: 992px) {
+            .assembly-area {
+                flex-direction: column;
+            }
+            .parts-panel {
+                width: 100%;
+                max-height: 300px;
+            }
+            .preview-area {
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .game-header {
+                flex-direction: column;
+                gap: 15px;
+                align-items: flex-start;
+            }
+            .action-buttons {
+                flex-direction: column;
+                width: 100%;
+            }
+            button {
+                width: 100%;
+                justify-content: center;
+            }
+            .pc-case {
+                width: 280px;
+                height: 350px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <h1 class="game-title">电脑组装大师</h1>
+            <div class="difficulty-select">
+                <label for="difficulty">难度：</label>
+                <select id="difficulty">
+                    <option value="easy" selected>简单（无预算限制）</option>
+                    <option value="medium">中等（预算15000元）</option>
+                    <option value="hard">困难（预算10000元）</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="assembly-area">
+            <!-- 部件选择面板 -->
+            <div class="parts-panel">
+                <div class="parts-category">
+                    <div class="category-title">核心部件（CPU）</div>
+                    <div class="part-item" data-type="cpu" data-name="Intel i7-13700K" data-price="3299" data-performance="90" data-compatible="intel" data-desc="16核24线程，主频3.4GHz，睿频5.4GHz，适合游戏+办公，兼容Intel主板">
+                        <span>CPU: Intel i7-13700K</span>
+                        <span class="part-price">¥3299</span>
+                    </div>
+                    <div class="part-item" data-type="cpu" data-name="AMD Ryzen 7 7800X3D" data-price="3499" data-performance="92" data-compatible="amd" data-desc="8核16线程，主频4.2GHz，睿频5.0GHz，3D缓存，游戏性能拉满，兼容AMD主板">
+                        <span>CPU: AMD Ryzen 7 7800X3D</span>
+                        <span class="part-price">¥3499</span>
+                    </div>
+                    <div class="part-item" data-type="cpu" data-name="Intel i5-13400F" data-price="1499" data-performance="75" data-compatible="intel" data-desc="10核16线程，主频2.5GHz，睿频4.6GHz，性价比之选，兼容Intel主板">
+                        <span>CPU: Intel i5-13400F</span>
+                        <span class="part-price">¥1499</span>
+                    </div>
+                </div>
+
+                <div class="parts-category">
+                    <div class="category-title">主板</div>
+                    <div class="part-item" data-type="motherboard" data-name="华硕ROG Z790" data-price="2999" data-performance="88" data-compatible="intel" data-desc="Intel Z790芯片组，支持DDR5内存，ATX版型，电竞级供电，兼容Intel 12/13代CPU">
+                        <span>主板: 华硕ROG Z790</span>
+                        <span class="part-price">¥2999</span>
+                    </div>
+                    <div class="part-item" data-type="motherboard" data-name="微星B650迫击炮" data-price="1799" data-performance="80" data-compatible="amd" data-desc="AMD B650芯片组，支持DDR5内存，ATX版型，稳定供电，兼容AMD Ryzen 7000系CPU">
+                        <span>主板: 微星B650迫击炮</span>
+                        <span class="part-price">¥1799</span>
+                    </div>
+                    <div class="part-item" data-type="motherboard" data-name="技嘉B760M AORUS" data-price="1299" data-performance="72" data-compatible="intel" data-desc="Intel B760芯片组，支持DDR4内存，Micro-ATX版型，性价比高，兼容Intel 12/13代CPU">
+                        <span>主板: 技嘉B760M AORUS</span>
+                        <span class="part-price">¥1299</span>
+                    </div>
+                </div>
+
+                <div class="parts-category">
+                    <div class="category-title">显卡</div>
+                    <div class="part-item" data-type="gpu" data-name="RTX 4070 Ti Super" data-price="5999" data-performance="91" data-compatible="all" data-desc="16GB GDDR6X显存，2310MHz核心频率，支持DLSS 3，适合4K游戏、设计渲染">
+                        <span>显卡: RTX 4070 Ti Super</span>
+                        <span class="part-price">¥5999</span>
+                    </div>
+                    <div class="part-item" data-type="gpu" data-name="RX 7900 XT" data-price="6499" data-performance="93" data-compatible="all" data-desc="24GB GDDR6显存，2025MHz核心频率，支持FSR 3，高分辨率游戏神器">
+                        <span>显卡: RX 7900 XT</span>
+                        <span class="part-price">¥6499</span>
+                    </div>
+                    <div class="part-item" data-type="gpu" data-name="RTX 4060 Ti" data-price="2499" data-performance="78" data-compatible="all" data-desc="8GB GDDR6显存，2310MHz核心频率，支持DLSS 3，1080P/2K游戏性价比之选">
+                        <span>显卡: RTX 4060 Ti</span>
+                        <span class="part-price">¥2499</span>
+                    </div>
+                </div>
+
+                <div class="parts-category">
+                    <div class="category-title">内存</div>
+                    <div class="part-item" data-type="ram" data-name="32GB DDR5 6000MHz" data-price="899" data-performance="85" data-compatible="all" data-desc="双条16GB，DDR5 6000MHz，时序32-38-38，高频内存，适合游戏+多任务">
+                        <span>内存: 32GB DDR5 6000MHz</span>
+                        <span class="part-price">¥899</span>
+                    </div>
+                    <div class="part-item" data-type="ram" data-name="16GB DDR4 3600MHz" data-price="499" data-performance="70" data-compatible="all" data-desc="双条8GB，DDR4 3600MHz，时序18-22-22，性价比高，适配老主板">
+                        <span>内存: 16GB DDR4 3600MHz</span>
+                        <span class="part-price">¥499</span>
+                    </div>
+                    <div class="part-item" data-type="ram" data-name="64GB DDR5 6400MHz" data-price="1799" data-performance="92" data-compatible="all" data-desc="双条32GB，DDR5 6400MHz，时序32-39-39，专业级内存，适合设计、渲染">
+                        <span>内存: 64GB DDR5 6400MHz</span>
+                        <span class="part-price">¥1799</span>
+                    </div>
+                </div>
+
+                <div class="parts-category">
+                    <div class="category-title">存储</div>
+                    <div class="part-item" data-type="storage" data-name="1TB NVMe SSD" data-price="499" data-performance="82" data-compatible="all" data-desc="PCIe 4.0，读速3500MB/s，写速3000MB/s，高速存储，适合系统+游戏">
+                        <span>存储: 1TB NVMe SSD</span>
+                        <span class="part-price">¥499</span>
+                    </div>
+                    <div class="part-item" data-type="storage" data-name="2TB SATA SSD" data-price="599" data-performance="65" data-compatible="all" data-desc="SATA 3.0，读速550MB/s，写速500MB/s，大容量，性价比高，适合数据存储">
+                        <span>存储: 2TB SATA SSD</span>
+                        <span class="part-price">¥599</span>
+                    </div>
+                    <div class="part-item" data-type="storage" data-name="2TB NVMe SSD" data-price="899" data-performance="88" data-compatible="all" data-desc="PCIe 4.0，读速7000MB/s，写速6000MB/s，高速大容量，适合专业用途">
+                        <span>存储: 2TB NVMe SSD</span>
+                        <span class="part-price">¥899</span>
+                    </div>
+                </div>
+
+                <div class="parts-category">
+                    <div class="category-title">电源</div>
+                    <div class="part-item" data-type="power" data-name="850W 金牌全模组" data-price="899" data-performance="85" data-compatible="all" data-desc="850W功率，金牌效率，全模组设计，静音风扇，适配中高端配置">
+                        <span>电源: 850W 金牌全模组</span>
+                        <span class="part-price">¥899</span>
+                    </div>
+                    <div class="part-item" data-type="power" data-name="750W 银牌非模组" data-price="599" data-performance="75" data-compatible="all" data-desc="750W功率，银牌效率，非模组设计，稳定耐用，适配中端配置">
+                        <span>电源: 750W 银牌非模组</span>
+                        <span class="part-price">¥599</span>
+                    </div>
+                    <div class="part-item" data-type="power" data-name="1000W 金牌全模组" data-price="1299" data-performance="90" data-compatible="all" data-desc="1000W功率，金牌效率，全模组设计，支持双显卡，适配高端配置">
+                        <span>电源: 1000W 金牌全模组</span>
+                        <span class="part-price">¥1299</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 组装预览区 -->
+            <div class="preview-area">
+                <!-- 预算信息 -->
+                <div class="budget-info">
+                    <div class="budget-title">当前总预算：</div>
+                    <div class="budget-value" id="total-budget">¥0</div>
+                </div>
+                <div class="budget-warning" id="budget-warning">⚠️ 超出预算！请更换更便宜的部件</div>
+
+                <!-- 新增：电路连接状态 -->
+                <div class="circuit-status">
+                    <div class="circuit-title">电路连接状态：</div>
+                    <div class="circuit-value" id="circuit-value">未连接</div>
+                </div>
+
+                <!-- 性能评分 -->
+                <div class="performance-score">
+                    <div class="score-header">
+                        <div class="score-title">电脑性能评分</div>
+                        <div class="score-value" id="performance-value">0</div>
+                    </div>
+                    <div class="score-bar">
+                        <div class="score-fill" id="score-fill"></div>
+                    </div>
+                </div>
+
+                <h2>电脑机箱</h2>
+                <div class="pc-case" id="pc-case">
+                    <!-- 已安装的部件会动态显示在这里 -->
+                    <!-- 电路连接线会动态生成在这里 -->
+                </div>
+
+                <div class="completion-status">
+                    组装进度: <span id="progress">0</span>/6
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button id="install-btn"><span>📥</span> 安装选中部件</button>
+                    <button id="uninstall-btn"><span>📤</span> 卸载选中部件</button>
+                    <button id="connect-btn"><span>🔗</span> 连接电路</button>
+                    <button id="reset-btn"><span>🔄</span> 重置组装</button>
+                </div>
+
+                <div class="message" id="message"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 部件预览弹窗 -->
+    <div class="preview-overlay" id="preview-overlay"></div>
+    <div class="part-preview" id="part-preview">
+        <div class="preview-header">
+            <h3 class="preview-title" id="preview-title"></h3>
+            <button class="close-preview" id="close-preview">×</button>
+        </div>
+        <div class="preview-content" id="preview-content"></div>
+    </div>
+
+    <!-- 通关弹窗 -->
+    <div class="completion-modal" id="completion-modal">
+        <h2 class="modal-title">恭喜通关！</h2>
+        <div class="modal-score" id="modal-score">0分</div>
+        <div class="modal-desc" id="modal-desc"></div>
+        <div class="modal-buttons">
+            <button id="restart-btn">🔄 重新开始</button>
+            <button id="change-difficulty-btn">🔀 更换难度</button>
+        </div>
+    </div>
+
+    <!-- 音效元素（隐藏） -->
+    <audio id="success-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-achievement-bell-600.mp3" preload="auto"></audio>
+    <audio id="error-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-interface-hint-notification-911.mp3" preload="auto"></audio>
+    <audio id="complete-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-video-game-win-269.mp3" preload="auto"></audio>
+    <!-- 新增：电路连接音效 -->
+    <audio id="connect-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-electricity-spark-1551.mp3" preload="auto"></audio>
+
+    <script>
+        // 全局变量
+        let selectedPart = null;
+        let installedParts = {}; // 存储已安装部件，key: 类型，value: 部件信息
+        const requiredParts = ['cpu', 'motherboard', 'gpu', 'ram', 'storage', 'power'];
+        const partPositions = {
+            cpu: { top: '30px', left: '50%', transform: 'translateX(-50%)', x: 160, y: 30 }, // 新增x、y坐标，用于电路连接
+            motherboard: { top: '80px', left: '50%', transform: 'translateX(-50%)', x: 160, y: 80 },
+            gpu: { top: '130px', left: '50%', transform: 'translateX(-50%)', x: 160, y: 130 },
+            ram: { top: '180px', left: '50%', transform: 'translateX(-50%)', x: 160, y: 180 },
+            storage: { top: '230px', left: '50%', transform: 'translateX(-50%)', x: 160, y: 230 },
+            power: { top: '280px', left: '50%', transform: 'translateX(-50%)', x: 160, y: 280 }
+        };
+        let totalBudget = 0; // 总预算
+        let budgetLimit = Infinity; // 预算限制，默认无限制
+        let totalPerformance = 0; // 总性能得分
+        let isCircuitConnected = false; // 新增：电路连接状态
+        let circuitLines = []; // 新增：存储电路连接线元素
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initEventListeners();
+            updateProgress();
+            updateBudget();
+            updatePerformance();
+            updateCircuitStatus();
+        });
+
+        // 初始化事件监听
+        function initEventListeners() {
+            // 部件选择事件
+            const partItems = document.querySelectorAll('.part-item');
+            partItems.forEach(item => {
+                // 点击选中
+                item.addEventListener('click', function() {
+                    // 移除之前的选中状态
+                    document.querySelectorAll('.part-item.selected').forEach(el => {
+                        el.classList.remove('selected');
+                    });
+                    // 设置新的选中状态
+                    this.classList.add('selected');
+                    selectedPart = {
+                        type: this.dataset.type,
+                        name: this.dataset.name,
+                        price: parseInt(this.dataset.price),
+                        performance: parseInt(this.dataset.performance),
+                        compatible: this.dataset.compatible,
+                        desc: this.dataset.desc
+                    };
+                    hideMessage();
+                });
+
+                // 双击查看详情
+                item.addEventListener('dblclick', function() {
+                    const partInfo = {
+                        name: this.dataset.name,
+                        price: this.dataset.price,
+                        performance: this.dataset.performance,
+                        desc: this.dataset.desc
+                    };
+                    showPartPreview(partInfo);
+                });
+            });
+
+            // 已安装部件点击事件（查看详情）
+            document.getElementById('pc-case').addEventListener('click', function(e) {
+                if (e.target.classList.contains('installed-part')) {
+                    const partName = e.target.textContent;
+                    // 找到对应的部件信息
+                    const partItem = document.querySelector(`.part-item[data-name="${partName}"]`);
+                    if (partItem) {
+                        const partInfo = {
+                            name: partItem.dataset.name,
+                            price: partItem.dataset.price,
+                            performance: partItem.dataset.performance,
+                            desc: partItem.dataset.desc
+                        };
+                        showPartPreview(partInfo);
+                    }
+                }
+            });
+
+            // 安装按钮事件
+            document.getElementById('install-btn').addEventListener('click', installSelectedPart);
+
+            // 卸载按钮事件
+            document.getElementById('uninstall-btn').addEventListener('click', uninstallSelectedPart);
+
+            // 重置按钮事件
+            document.getElementById('reset-btn').addEventListener('click', resetAssembly);
+
+            // 新增：电路连接按钮事件
+            document.getElementById('connect-btn').addEventListener('click', connectCircuit);
+
+            // 难度选择事件
+            document.getElementById('difficulty').addEventListener('change', function() {
+                const difficulty = this.value;
+                switch(difficulty) {
+                    case 'easy':
+                        budgetLimit = Infinity;
+                        break;
+                    case 'medium':
+                        budgetLimit = 15000;
+                        break;
+                    case 'hard':
+                        budgetLimit = 10000;
+                        break;
+                }
+                updateBudget(); // 更新预算显示
+                checkBudget(); // 检查是否超出预算
+            });
+
+            // 关闭预览弹窗
+            document.getElementById('close-preview').addEventListener('click', hidePartPreview);
+            document.getElementById('preview-overlay').addEventListener('click', hidePartPreview);
+
+            // 通关弹窗按钮事件
+            document.getElementById('restart-btn').addEventListener('click', function() {
+                hideCompletionModal();
+                resetAssembly();
+            });
+            document.getElementById('change-difficulty-btn').addEventListener('click', function() {
+                hideCompletionModal();
+                document.getElementById('difficulty').focus();
+            });
+        }
+
+        // 安装选中的部件
+        function installSelectedPart() {
+            if (!selectedPart) {
+                showMessage('请先选择一个部件！', 'error');
+                playSound('error');
+                return;
+            }
+
+            const partType = selectedPart.type;
+            
+            // 检查是否已安装该类型部件
+            if (installedParts[partType]) {
+                showMessage(`已安装${getPartTypeName(partType)}，无法重复安装！`, 'error');
+                playSound('error');
+                return;
+            }
+
+            // 检查兼容性（CPU和主板）
+            if (!checkCompatibility(selectedPart)) {
+                showMessage(`该${getPartTypeName(partType)}与已安装的部件不兼容！`, 'error');
+                playSound('error');
+                return;
+            }
+
+            // 检查预算
+            if (totalBudget + selectedPart.price > budgetLimit) {
+                showMessage(`安装该部件会超出预算（当前预算：¥${budgetLimit}）！`, 'warning');
+                playSound('error');
+                return;
+            }
+
+            // 添加部件到机箱
+            addPartToCase(selectedPart);
+            
+            // 标记为已安装
+            installedParts[partType] = selectedPart;
+            
+            // 更新预算
+            totalBudget += selectedPart.price;
+            updateBudget();
+            checkBudget();
+            
+            // 更新性能
+            totalPerformance += selectedPart.performance;
+            updatePerformance();
+            
+            // 更新进度
+            updateProgress();
+            
+            // 显示成功提示
+            showMessage(`成功安装：${selectedPart.name}`, 'success');
+            playSound('success');
+            
+            // 若已连接电路，安装新部件后断开电路（模拟真实场景：新增部件需重新连接电路）
+            if (isCircuitConnected) {
+                disconnectCircuit(false); // false表示不提示
+                showMessage('新增部件后电路已断开，请重新连接！', 'warning');
+            }
+            
+            // 清除选中状态
+            document.querySelectorAll('.part-item.selected').forEach(el => {
+                el.classList.remove('selected');
+            });
+            selectedPart = null;
+
+            // 检查是否完成全部组装（但未连接电路时，不触发通关）
+            if (requiredParts.every(partType => installedParts[partType]) && !isCircuitConnected) {
+                showMessage('所有部件已安装完毕，请连接电路完成组装！', 'warning');
+            }
+        }
+
+        // 卸载选中的部件
+        function uninstallSelectedPart() {
+            if (!selectedPart) {
+                showMessage('请先选择一个部件！', 'error');
+                playSound('error');
+                return;
+            }
+
+            const partType = selectedPart.type;
+            
+            // 检查是否已安装该类型部件
+            if (!installedParts[partType]) {
+                showMessage(`未安装${getPartTypeName(partType)}，无法卸载！`, 'error');
+                playSound('error');
+                return;
+            }
+
+            // 从机箱中移除部件元素
+            removePartFromCase(partType);
+            
+            // 从已安装列表移除
+            const removedPart = installedParts[partType];
+            delete installedParts[partType];
+            
+            // 更新预算
+            totalBudget -= removedPart.price;
+            updateBudget();
+            checkBudget();
+            
+            // 更新性能
+            totalPerformance -= removedPart.performance;
+            updatePerformance();
+            
+            // 更新进度
+            updateProgress();
+            
+            // 显示成功提示
+            showMessage(`成功卸载：${removedPart.name}`, 'success');
+            playSound('success');
+            
+            // 若已连接电路，卸载部件后断开电路
+            if (isCircuitConnected) {
+                disconnectCircuit(false);
+                showMessage('卸载部件后电路已断开，请重新连接！', 'warning');
+            }
+            
+            // 清除选中状态
+            document.querySelectorAll('.part-item.selected').forEach(el => {
+                el.classList.remove('selected');
+            });
+            selectedPart = null;
+        }
+
+        // 重置组装
+        function resetAssembly() {
+            // 清空机箱中的所有部件
+            const pcCase = document.getElementById('pc-case');
+            pcCase.innerHTML = '';
+            
+            // 重置全局变量
+            selectedPart = null;
+            installedParts = {};
+            totalBudget = 0;
+            totalPerformance = 0;
+            isCircuitConnected = false;
+            circuitLines = [];
+            
+            // 清除所有选中状态
+            document.querySelectorAll('.part-item.selected').forEach(el => {
+                el.classList.remove('selected');
+            });
+            
+            // 更新UI
+            updateProgress();
+            updateBudget();
+            updatePerformance();
+            updateCircuitStatus();
+            hideMessage();
+            disconnectCircuit(false); // 确保电路重置
+            
+            showMessage('已重置所有组装进度！', 'success');
+        }
+
+        // 连接电路
+        function connectCircuit() {
+            // 检查是否安装了所有部件
+            if (Object.keys(installedParts).length !== requiredParts.length) {
+                showMessage('请先安装所有部件再连接电路！', 'error');
+                playSound('error');
+                return;
+            }
+
+            if (isCircuitConnected) {
+                showMessage('电路已连接，无需重复连接！', 'warning');
+                return;
+            }
+
+            // 创建电路连接线
+            createCircuitLines();
+            
+            // 更新状态
+            isCircuitConnected = true;
+            updateCircuitStatus();
+            
+            // 播放音效
+            playSound('connect');
+            showMessage('电路连接成功！', 'success');
+            
+            // 检查是否完成所有条件
+            updateProgress();
+        }
+
+        // 断开电路
+        function disconnectCircuit(showTip = true) {
+            // 移除所有电路线
+            circuitLines.forEach(line => {
+                if (line.parentNode) {
+                    line.parentNode.removeChild(line);
+                }
+            });
+            circuitLines = [];
+            
+            // 更新状态
+            isCircuitConnected = false;
+            updateCircuitStatus();
+            
+            if (showTip) {
+                showMessage('电路已断开！', 'warning');
+            }
+        }
+
+        // 创建电路连接线
+        function createCircuitLines() {
+            const pcCase = document.getElementById('pc-case');
+            const caseRect = pcCase.getBoundingClientRect();
+            const caseLeft = caseRect.left;
+            const caseTop = caseRect.top;
+
+            // 遍历所有已安装部件，创建连接线
+            const partTypes = Object.keys(installedParts);
+            for (let i = 0; i < partTypes.length - 1; i++) {
+                const fromType = partTypes[i];
+                const toType = partTypes[i + 1];
+                const fromPos = partPositions[fromType];
+                const toPos = partPositions[toType];
+                
+                // 创建连接线元素
+                const line = document.createElement('div');
+                line.className = 'circuit-line';
+                
+                // 计算线的位置和尺寸
+                const startX = fromPos.x;
+                const startY = fromPos.y + 20; // 部件元素高度约20px，从底部开始
+                const endX = toPos.x;
+                const endY = toPos.y;
+                
+                // 设置线的样式
+                const length = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
+                const angle = Math.atan2(endY - startY, endX - startX) * 180 / Math.PI;
+                
+                line.style.width = `${length}px`;
+                line.style.left = `${startX}px`;
+                line.style.top = `${startY}px`;
+                line.style.transform = `rotate(${angle}deg)`;
+                line.style.transformOrigin = '0 50%';
+                
+                // 添加到机箱
+                pcCase.appendChild(line);
+                circuitLines.push(line);
+                
+                // 渐显效果
+                setTimeout(() => {
+                    line.classList.add('connected');
+                }, i * 100);
+            }
+        }
+
+        // 将部件添加到机箱显示
+        function addPartToCase(part) {
+            const pcCase = document.getElementById('pc-case');
+            const partType = part.type;
+            const position = partPositions[partType];
+            
+            // 创建部件元素
+            const partElement = document.createElement('div');
+            partElement.className = 'installed-part';
+            partElement.textContent = part.name;
+            partElement.dataset.type = partType;
+            
+            // 设置位置
+            partElement.style.top = position.top;
+            partElement.style.left = position.left;
+            partElement.style.transform = position.transform;
+            
+            // 添加到机箱
+            pcCase.appendChild(partElement);
+        }
+
+        // 从机箱中移除部件元素
+        function removePartFromCase(partType) {
+            const pcCase = document.getElementById('pc-case');
+            const partElement = pcCase.querySelector(`.installed-part[data-type="${partType}"]`);
+            if (partElement) {
+                pcCase.removeChild(partElement);
+            }
+        }
+
+        // 获取部件类型名称
+        function getPartTypeName(type) {
+            const typeMap = {
+                cpu: 'CPU',
+                motherboard: '主板',
+                gpu: '显卡',
+                ram: '内存',
+                storage: '存储',
+                power: '电源'
+            };
+            return typeMap[type] || type;
+        }
+
+        // 检查部件兼容性（CPU和主板）
+        function checkCompatibility(newPart) {
+            // 非CPU/主板直接兼容
+            if (!['cpu', 'motherboard'].includes(newPart.type)) return true;
+            
+            // 安装CPU时，检查已安装的主板是否兼容
+            if (newPart.type === 'cpu') {
+                if (installedParts.motherboard) {
+                    return installedParts.motherboard.compatible === newPart.compatible;
+                }
+            }
+            
+            // 安装主板时，检查已安装的CPU是否兼容
+            if (newPart.type === 'motherboard') {
+                if (installedParts.cpu) {
+                    return installedParts.cpu.compatible === newPart.compatible;
+                }
+            }
+            
+            // 无冲突则兼容
+            return true;
+        }
+
+        // 显示部件预览
+        function showPartPreview(partInfo) {
+            document.getElementById('preview-title').textContent = partInfo.name;
+            document.getElementById('preview-content').innerHTML = `
+                <p><span>价格：</span>¥${partInfo.price}</p>
+                <p><span>性能评分：</span>${partInfo.performance}</p>
+                <p><span>详细描述：</span>${partInfo.desc}</p>
+            `;
+            document.getElementById('preview-overlay').style.display = 'block';
+            document.getElementById('part-preview').style.display = 'block';
+        }
+
+        // 隐藏部件预览
+        function hidePartPreview() {
+            document.getElementById('preview-overlay').style.display = 'none';
+            document.getElementById('part-preview').style.display = 'none';
+        }
+
+        // 显示提示信息
+        function showMessage(text, type) {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = text;
+            messageEl.className = `message ${type}`;
+            // 3秒后自动隐藏
+            setTimeout(() => {
+                hideMessage();
+            }, 3000);
+        }
+
+        // 隐藏提示信息
+        function hideMessage() {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = '';
+            messageEl.className = 'message';
+        }
+
+        // 播放音效
+        function playSound(type) {
+            const soundEl = document.getElementById(`${type}-sound`);
+            if (soundEl) {
+                soundEl.play().catch(e => console.log('播放音效失败：', e));
+            }
+        }
+
+        // 更新预算显示
+        function updateBudget() {
+            document.getElementById('total-budget').textContent = `¥${totalBudget}`;
+        }
+
+        // 检查预算是否超出
+        function checkBudget() {
+            const warningEl = document.getElementById('budget-warning');
+            if (totalBudget > budgetLimit && budgetLimit !== Infinity) {
+                warningEl.style.display = 'block';
+            } else {
+                warningEl.style.display = 'none';
+            }
+        }
+
+        // 更新性能评分
+        function updatePerformance() {
+            const performanceValue = document.getElementById('performance-value');
+            const scoreFill = document.getElementById('score-fill');
+            const totalPossible = requiredParts.length * 100; // 假设每个部件最高100分
+            const score = Math.min(Math.round((totalPerformance / totalPossible) * 100), 100);
+            
+            performanceValue.textContent = score;
+            scoreFill.style.width = `${score}%`;
+        }
+
+        // 更新组装进度
+        function updateProgress() {
+            const installedCount = Object.keys(installedParts).length;
+            const progressText = document.getElementById('progress');
+            const progressFill = document.getElementById('progress-fill');
+            
+            progressText.textContent = installedCount;
+            progressFill.style.width = `${(installedCount / requiredParts.length) * 100}%`;
+            
+            // 检查是否完成所有部件安装且电路已连接
+            if (installedCount === requiredParts.length && isCircuitConnected) {
+                setTimeout(showCompletionModal, 500);
+            }
+        }
+
+        // 更新电路状态显示
+        function updateCircuitStatus() {
+            const circuitValue = document.getElementById('circuit-value');
+            if (isCircuitConnected) {
+                circuitValue.textContent = '已连接';
+                circuitValue.classList.add('connected');
+            } else {
+                circuitValue.textContent = '未连接';
+                circuitValue.classList.remove('connected');
+            }
+        }
+
+        // 显示通关弹窗
+        function showCompletionModal() {
+            const finalScore = document.getElementById('performance-value').textContent;
+            document.getElementById('modal-score').textContent = `${finalScore}分`;
+            document.getElementById('modal-desc').textContent = `你已成功组装一台性能得分为${finalScore}分的电脑！
+            预算使用：¥${totalBudget} / ¥${budgetLimit === Infinity ? '无限制' : budgetLimit}`;
+            document.getElementById('completion-modal').style.display = 'block';
+            playSound('complete');
+        }
+
+        // 隐藏通关弹窗
+        function hideCompletionModal() {
+            document.getElementById('completion-modal').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
