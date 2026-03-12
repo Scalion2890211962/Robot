@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>履带式运载车 H5 演示</title>
+    <style>
+        /* 页面基础样式 */
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: Arial, sans-serif;
+        }
+
+        /* 运载车容器 - 控制整体位置和动画 */
+        .car-container {
+            position: relative;
+            width: 400px;
+            height: 200px;
+            margin-top: 50px;
+            /* 初始动画：左右移动 */
+            animation: carMove 8s linear infinite alternate;
+        }
+
+        /* 车身主体 */
+        .car-body {
+            position: absolute;
+            top: 20px;
+            left: 50px;
+            width: 300px;
+            height: 100px;
+            background-color: #333;
+            border-radius: 10px;
+            z-index: 2; /* 确保车身在履带上层 */
+        }
+
+        /* 驾驶室 */
+        .car-cab {
+            position: absolute;
+            top: -30px;
+            right: 20px;
+            width: 80px;
+            height: 60px;
+            background-color: #555;
+            border-radius: 8px 8px 0 0;
+        }
+
+        /* 履带通用样式 */
+        .track {
+            position: absolute;
+            width: 40px;
+            height: 160px;
+            background-color: #222;
+            border-radius: 5px;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        /* 左侧履带 */
+        .track-left {
+            left: 20px;
+            top: 10px;
+        }
+
+        /* 右侧履带 */
+        .track-right {
+            right: 20px;
+            top: 10px;
+        }
+
+        /* 履带纹理 - 实现滚动效果 */
+        .track-pattern {
+            position: absolute;
+            width: 100%;
+            height: 200%;
+            background-image: 
+                linear-gradient(45deg, #444 25%, transparent 25%),
+                linear-gradient(-45deg, #444 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #444 75%),
+                linear-gradient(-45deg, transparent 75%, #444 75%);
+            background-size: 20px 20px;
+            /* 履带滚动动画 */
+            animation: trackRoll 1s linear infinite;
+        }
+
+        /* 控制按钮样式 */
+        .control-panel {
+            margin-top: 50px;
+            display: flex;
+            gap: 15px;
+        }
+
+        .control-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        .control-btn:hover {
+            background-color: #45a049;
+        }
+
+        .control-btn.stop {
+            background-color: #f44336;
+        }
+
+        .control-btn.stop:hover {
+            background-color: #d32f2f;
+        }
+
+        /* 动画定义 */
+        @keyframes trackRoll {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-50%); } /* 滚动半程，循环无断层 */
+        }
+
+        @keyframes carMove {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(300px); }
+        }
+
+        /* 停止状态 */
+        .car-container.stop {
+            animation-play-state: paused;
+        }
+
+        .track-pattern.stop {
+            animation-play-state: paused;
+        }
+    </style>
+</head>
+<body>
+    <!-- 运载车主体 -->
+    <div class="car-container" id="car">
+        <!-- 车身 -->
+        <div class="car-body">
+            <div class="car-cab"></div>
+        </div>
+        <!-- 左侧履带 -->
+        <div class="track track-left">
+            <div class="track-pattern" id="trackLeft"></div>
+        </div>
+        <!-- 右侧履带 -->
+        <div class="track track-right">
+            <div class="track-pattern" id="trackRight"></div>
+        </div>
+    </div>
+
+    <!-- 控制面板 -->
+    <div class="control-panel">
+        <button class="control-btn" id="startBtn">启动</button>
+        <button class="control-btn stop" id="stopBtn">停止</button>
+    </div>
+
+    <script>
+        // 获取DOM元素
+        const car = document.getElementById('car');
+        const trackLeft = document.getElementById('trackLeft');
+        const trackRight = document.getElementById('trackRight');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+
+        // 启动按钮点击事件
+        startBtn.addEventListener('click', () => {
+            car.classList.remove('stop');
+            trackLeft.classList.remove('stop');
+            trackRight.classList.remove('stop');
+        });
+
+        // 停止按钮点击事件
+        stopBtn.addEventListener('click', () => {
+            car.classList.add('stop');
+            trackLeft.classList.add('stop');
+            trackRight.classList.add('stop');
+        });
+
+        // 可选：添加键盘控制（方向键左右移动）
+        document.addEventListener('keydown', (e) => {
+            const carRect = car.getBoundingClientRect();
+            let currentLeft = parseInt(car.style.left || 0);
+            
+            // 左方向键
+            if (e.key === 'ArrowLeft') {
+                currentLeft = Math.max(0, currentLeft - 10);
+                car.style.left = currentLeft + 'px';
+            }
+            // 右方向键
+            if (e.key === 'ArrowRight') {
+                currentLeft = Math.min(window.innerWidth - 400, currentLeft + 10);
+                car.style.left = currentLeft + 'px';
+            }
+        });
+    </script>
+</body>
+</html>
