@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网络知识闯关小游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "微软雅黑", sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            min-height: 100vh;
+            color: white;
+            overflow-x: hidden;
+        }
+
+        /* 游戏开始界面 */
+        .start-screen {
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.2);
+            padding: 40px;
+            width: 100%;
+            max-width: 600px;
+            margin-top: 50px;
+            text-align: center;
+            color: #2c3e50;
+        }
+
+        .start-screen h1 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+
+        .start-screen p {
+            margin-bottom: 30px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .difficulty-select {
+            margin: 20px 0;
+        }
+
+        .difficulty-btn {
+            padding: 10px 25px;
+            margin: 0 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background-color: #667eea;
+            color: white;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .difficulty-btn.active {
+            background-color: #4c6ef5;
+            transform: scale(1.1);
+        }
+
+        .start-btn {
+            padding: 12px 40px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background-color: #4c6ef5;
+            color: white;
+            font-size: 18px;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .start-btn:hover {
+            background-color: #3b5bdb;
+            transform: translateY(-2px);
+        }
+
+        /* 游戏主容器 */
+        .game-container {
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.2);
+            padding: 30px;
+            width: 100%;
+            max-width: 600px;
+            margin-top: 50px;
+            color: #2c3e50;
+            display: none;
+        }
+
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .level-info {
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .timer-box {
+            font-size: 18px;
+            font-weight: bold;
+            color: #e74c3c;
+        }
+
+        .title {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 24px;
+        }
+
+        .question-box {
+            margin-bottom: 25px;
+        }
+
+        .question {
+            font-size: 20px;
+            color: #34495e;
+            margin-bottom: 20px;
+            line-height: 1.5;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .option {
+            padding: 15px 20px;
+            background-color: #ecf0f1;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            font-size: 16px;
+        }
+
+        .option:hover {
+            background-color: #d5e8f7;
+            transform: translateX(5px);
+        }
+
+        .correct {
+            background-color: #c8e6c9 !important;
+            border-color: #4caf50 !important;
+            animation: correctBounce 0.5s ease;
+        }
+
+        .wrong {
+            background-color: #ffcdd2 !important;
+            border-color: #f44336 !important;
+            animation: wrongShake 0.5s ease;
+        }
+
+        /* 动画效果 */
+        @keyframes correctBounce {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes wrongShake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .next-btn {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .next-btn:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .restart-btn {
+            background-color: #95a5a6;
+            color: white;
+        }
+
+        .restart-btn:hover {
+            background-color: #7f8c8d;
+            transform: translateY(-2px);
+        }
+
+        /* 计分板 */
+        .score-panel {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+
+        .score-box, .combo-box {
+            background-color: #f8f9fa;
+            padding: 10px 15px;
+            border-radius: 8px;
+        }
+
+        .combo-text {
+            color: #e67e22;
+            font-weight: bold;
+        }
+
+        /* 结果界面 */
+        .result-screen {
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.2);
+            padding: 40px;
+            width: 100%;
+            max-width: 600px;
+            margin-top: 50px;
+            text-align: center;
+            color: #2c3e50;
+            display: none;
+        }
+
+        .result-screen h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 32px;
+        }
+
+        .result-stats {
+            margin: 30px 0;
+            font-size: 18px;
+            line-height: 2;
+        }
+
+        .rank-list {
+            margin: 20px 0;
+            text-align: left;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 10px;
+        }
+
+        .rank-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .rank-item:last-child {
+            border-bottom: none;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- 游戏开始界面 -->
+    <div class="start-screen" id="startScreen">
+        <h1>🌐 网络知识闯关小游戏</h1>
+        <p>测试你对计算机网络知识的掌握程度！<br>涵盖TCP/IP、IP地址、DNS、HTTP/HTTPS、路由、局域网/广域网等核心知识点</p>
+        
+        <div class="difficulty-select">
+            <h3>选择难度</h3>
+            <button class="difficulty-btn active" data-level="easy">简单</button>
+            <button class="difficulty-btn" data-level="medium">中等</button>
+            <button class="difficulty-btn" data-level="hard">困难</button>
+        </div>
+        
+        <button class="start-btn" id="startBtn">开始游戏 🚀</button>
+    </div>
+
+    <!-- 游戏主界面 -->
+    <div class="game-container" id="gameContainer">
+        <div class="game-header">
+            <div class="level-info" id="levelInfo">难度：简单 | 第1题/10题</div>
+            <div class="timer-box">剩余时间：<span id="timer">30</span>s</div>
+        </div>
+        
+        <div class="score-panel">
+            <div class="score-box">得分: <span id="score">0</span></div>
+            <div class="combo-box">连击: <span id="combo" class="combo-text">0</span></div>
+        </div>
+
+        <div class="question-box" id="questionBox">
+            <div class="question" id="question"></div>
+            <div class="options" id="options"></div>
+        </div>
+
+        <div class="controls">
+            <button class="btn next-btn" id="nextBtn">下一题 ➡️</button>
+        </div>
+    </div>
+
+    <!-- 结果界面 -->
+    <div class="result-screen" id="resultScreen">
+        <h2>🏆 游戏结束！</h2>
+        <div class="result-stats">
+            <p>最终得分：<span id="finalScore">0</span></p>
+            <p>最高连击：<span id="maxCombo">0</span></p>
+            <p id="resultDesc"></p>
+        </div>
+        
+        <h3>历史成绩</h3>
+        <div class="rank-list" id="rankList">
+            <!-- 历史成绩会动态生成 -->
+        </div>
+        
+        <button class="start-btn" id="restartBtn">再来一局 🔄</button>
+    </div>
+
+    <script>
+        // 分难度题库
+        const questionBank = {
+            easy: [
+                {
+                    question: "TCP/IP五层模型从上到下的正确顺序是？",
+                    options: [
+                        "应用层、传输层、网络层、数据链路层、物理层",
+                        "物理层、数据链路层、网络层、传输层、应用层",
+                        "应用层、网络层、传输层、数据链路层、物理层",
+                        "应用层、传输层、网络层、物理层、数据链路层"
+                    ],
+                    answer: 0
+                },
+                {
+                    question: "以下哪项是IPv4地址的正确格式？",
+                    options: [
+                        "192.168.1.256",
+                        "192.168.1.1",
+                        "www.baidu.com",
+                        "2001:0db8:85a3:0000:0000:8a2e:0370:7334"
+                    ],
+                    answer: 1
+                },
+                {
+                    question: "DNS的主要作用是？",
+                    options: [
+                        "将IP地址转换为域名",
+                        "将域名转换为IP地址",
+                        "加密网络传输数据",
+                        "路由选择"
+                    ],
+                    answer: 1
+                },
+                {
+                    question: "HTTPS相比HTTP的核心优势是？",
+                    options: [
+                        "传输速度更快",
+                        "使用UDP协议传输",
+                        "数据传输加密，更安全",
+                        "不需要域名解析"
+                    ],
+                    answer: 2
+                },
+                {
+                    question: "路由器的核心功能是？",
+                    options: [
+                        "只在局域网内转发数据",
+                        "在不同网络之间转发数据包（路由选择）",
+                        "存储网页数据",
+                        "分配域名"
+                    ],
+                    answer: 1
+                },
+                {
+                    question: "局域网（LAN）的特点是？",
+                    options: [
+                        "覆盖范围广（如跨国家）",
+                        "覆盖范围小（如一个办公室/家庭）",
+                        "必须通过公网IP访问",
+                        "不需要路由器"
+                    ],
+                    answer: 1
+                },
+                {
+                    question: "广域网（WAN）的典型例子是？",
+                    options: [
+                        "家庭WiFi网络",
+                        "公司内部办公网络",
+                        "互联网（Internet）",
+                        "打印机共享网络"
+                    ],
+                    answer: 2
+                },
+                {
+                    question: "TCP协议的特点不包括？",
+                    options: [
+                        "面向连接",
+                        "可靠传输（有确认机制）",
+                        "无连接",
+                        "有序传输"
+                    ],
+                    answer: 2
+                },
+                {
+                    question: "以下哪种协议负责IP地址到MAC地址的解析？",
+                    options: [
+                        "DNS",
+                        "ARP",
+                        "HTTP",
+                        "HTTPS"
+                    ],
+                    answer: 1
+                },
+                {
+                    question: "HTTP协议默认使用的端口号是？",
+                    options: [
+                        "80",
+                        "443",
+                        "21",
+                        "22"
+                    ],
+                    answer: 0
+                }
+            ],
+            medium: [
+                {
+                    question: "TCP三次握手的正确顺序是？",
+                    options: [
+                        "SYN -> SYN+ACK -> ACK",
+                        "ACK -> SYN -> SYN+ACK",
+                        "SYN+ACK -> SYN -> ACK",
+                        "SYN -> ACK -> SYN+ACK"
+                    ],
+                    answer: 0
+                },
+                {
+                    question: "子网掩码 255.255.255.0 表示前多少位是网络位？",
+                    options: ["8位", "16位", "24位", "32位"],
+                    answer: 2
+                },
+                {
+                    question: "HTTPS使用的加密协议不包括？",
+                    options: ["SSL", "TLS", "SSH", "以上都是"],
+                    answer: 2
+                },
+                {
+                    question: "以下哪个不是ICMP协议的作用？",
+                    options: [
+                        "网络故障诊断",
+                        "IP地址分配",
+                        "ping测试",
+                        "路由错误报告"
+                    ],
+                    answer: 1
+                },
+                {
+                    question: "NAT的主要作用是？",
+                    options: [
+                        "将私有IP转换为公网IP",
+                        "加密数据传输",
+                        "解析域名",
+                        "路由选择"
+                    ],
+                    answer: 0
+                },
+                {
+                    question: "UDP协议的特点是？",
+                    options: [
+                        "面向连接、可靠传输",
+                        "无连接、不可靠但高效",
+                        "有序传输、有重传机制",
+                        "需要三次握手建立连接"
+                    ],
+                    answer: 1
+                },
+                {
+                    question: "MAC地址的长度是？",
+                    options: ["32位", "48位", "64位", "128位"],
+                    answer: 1
+                },
+                {
+                    question: "以下哪个是私有IP地址段？",
+                    options: [
+                        "192.168.0.0/16",
+                        "202.106.0.0/16",
+                        "8.8.8.8/32",
+                        "138.0.0.0/8"
+                    ],
+                    answer: 0
+                },
+                {
+                    question: "HTTP状态码 404 表示？",
+                    options: [
+                        "服务器内部错误",
+                        "请求的资源不存在",
+                        "权限不足",
+                        "重定向"
+                    ],
+                    answer: 1
+                },
+                {
+                    question: "交换机工作在TCP/IP五层模型的哪一层？",
+                    options: [
+                        "物理层",
+                        "数据链路层",
+                        "网络层",
+                        "传输层"
+                    ],
+                    answer: 1
+                }
+            ],
+            hard: [
+                {
+                    question: "TCP滑动窗口的主要作用是？",
+                    options: [
+                        "流量控制和拥塞控制",
+                        "错误检测",
+                        "地址解析",
+                        "连接建立"
+                    ],
+                    answer: 0
+                },
+                {
+                    question: "BGP协议属于哪种类型的路由协议？",
+                    options: [
+                        "内部网关协议(IGP)",
+                        "外部网关协议(EGP)",
+                        "链路状态协议",
+                        "距离矢量协议"
+                    ],
+                    answer: 1
+                },
+                {
+                    question: "以下哪种攻击方式利用了TCP三次握手的漏洞？",
+                    options: [
+                        "SYN泛洪攻击",
+                        "DNS劫持",
+                        "ARP欺骗",
+                        "SQL注入"
+                    ],
+                    answer: 0
+                },
+                {
+                    question: "HTTP/2相比HTTP/1.1的核心改进是？",
+                    options: [
+                        "明文传输改为加密传输",
+                        "多路复用，提高并发性能",
+                        "端口号从80改为443",
+                        "增加了状态码"
+                    ],
+                    answer: 1
+                },
+                {
+                    question: "OSPF协议使用的度量值是？",
+                    options: ["跳数", "带宽", "延迟", "成本"],
+                    answer: 1
+                },
+                {
+                    question: "IPSec协议工作在哪个层次？",
+                    options: [
+                        "应用层",
+                        "传输层",
+                        "网络层",
+                        "数据链路层"
+                    ],
+                    answer: 2
+                },
+                {
+                    question: "以下哪个不是TCP拥塞控制算法？",
+                    options: ["慢启动", "拥塞避免", "快速重传", "CSMA/CD"],
+                    answer: 3
+                },
+                {
+                    question: "DNS的递归查询和迭代查询的区别是？",
+                    options: [
+                        "递归查询由客户端完成所有查询，迭代由服务器完成",
+                        "递归查询由服务器逐级查询，迭代由客户端自己查询",
+                        "递归查询更快，迭代查询更慢",
+                        "递归查询使用TCP，迭代查询使用UDP"
+                    ],
+                    answer: 1
+                },
+                {
+                    question: "WebSocket协议的特点是？",
+                    options: [
+                        "基于HTTP，全双工通信",
+                        "仅支持单向数据传输",
+                        "需要频繁建立和断开连接",
+                        "不支持二进制数据传输"
+                    ],
+                    answer: 0
+                },
+                {
+                    question: "MPLS技术的核心是？",
+                    options: [
+                        "基于IP地址转发",
+                        "基于标签转发，提高转发效率",
+                        "加密数据传输",
+                        "域名解析加速"
+                    ],
+                    answer: 1
+                }
+            ]
+        };
+
+        // 全局变量
+        let currentDifficulty = "easy";
+        let currentQuestions = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let answered = false;
+        let timer;
+        let timeLeft = 30;
+        let combo = 0;
+        let maxCombo = 0;
+        let gameHistory = JSON.parse(localStorage.getItem("networkGameHistory")) || [];
+
+        // DOM元素
+        const startScreen = document.getElementById("startScreen");
+        const gameContainer = document.getElementById("gameContainer");
+        const resultScreen = document.getElementById("resultScreen");
+        const startBtn = document.getElementById("startBtn");
+        const restartBtn = document.getElementById("restartBtn");
+        const difficultyBtns = document.querySelectorAll(".difficulty-btn");
+        const levelInfo = document.getElementById("levelInfo");
+        const timerElement = document.getElementById("timer");
+        const questionElement = document.getElementById("question");
+        const optionsElement = document.getElementById("options");
+        const nextBtn = document.getElementById("nextBtn");
+        const scoreElement = document.getElementById("score");
+        const comboElement = document.getElementById("combo");
+        const finalScoreElement = document.getElementById("finalScore");
+        const maxComboElement = document.getElementById("maxCombo");
+        const resultDescElement = document.getElementById("resultDesc");
+        const rankList = document.getElementById("rankList");
+
+        // 初始化难度选择
+        difficultyBtns.forEach(btn => {
+            btn.addEventListener("click", () => {
+                difficultyBtns.forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+                currentDifficulty = btn.dataset.level;
+                // 根据难度调整倒计时
+                timeLeft = currentDifficulty === "easy" ? 30 : currentDifficulty === "medium" ? 20 : 15;
+            });
+        });
+
+        // 初始化游戏
+        function initGame() {
+            // 重置状态
+            currentQuestionIndex = 0;
+            score = 0;
+            combo = 0;
+            maxCombo = 0;
+            answered = false;
+            
+            // 更新显示
+            scoreElement.textContent = score;
+            comboElement.textContent = combo;
+            
+            // 获取对应难度的题库
+            currentQuestions = questionBank[currentDifficulty];
+            
+            // 更新难度信息
+            const levelText = currentDifficulty === "easy" ? "简单" : currentDifficulty === "medium" ? "中等" : "困难";
+            levelInfo.textContent = `难度：${levelText} | 第1题/10题`;
+            
+            // 显示/隐藏界面
+            startScreen.style.display = "none";
+            resultScreen.style.display = "none";
+            gameContainer.style.display = "block";
+            
+            // 加载第一题
+            loadQuestion();
+        }
+
+        // 加载当前问题
+        function loadQuestion() {
+            // 重置答题状态
+            answered = false;
+            
+            // 更新题目计数
+            const levelText = currentDifficulty === "easy" ? "简单" : currentDifficulty === "medium" ? "中等" : "困难";
+            levelInfo.textContent = `难度：${levelText} | 第${currentQuestionIndex + 1}题/10题`;
+            
+            // 重置计时器
+            clearInterval(timer);
+            timeLeft = currentDifficulty === "easy" ? 30 : currentDifficulty === "medium" ? 20 : 15;
+            timerElement.textContent = timeLeft;
+            
+            // 启动计时器
+            startTimer();
+            
+            // 加载题目内容
+            const currentQuestion = currentQuestions[currentQuestionIndex];
+            questionElement.textContent = currentQuestion.question;
+            optionsElement.innerHTML = "";
+
+            // 生成选项
+            currentQuestion.options.forEach((option, index) => {
+                const optionElement = document.createElement("div");
+                optionElement.className = "option";
+                optionElement.textContent = option;
+                optionElement.dataset.index = index;
+                optionElement.addEventListener("click", selectOption);
+                optionsElement.appendChild(optionElement);
+            });
+        }
+
+        // 启动倒计时
+        function startTimer() {
+            timer = setInterval(() => {
+                timeLeft--;
+                timerElement.textContent = timeLeft;
+                
+                // 时间到自动答错
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    if (!answered) {
+                        answered = true;
+                        // 标记正确答案，其他选项不变
+                        const correctIndex = currentQuestions[currentQuestionIndex].answer;
+                        const allOptions = document.querySelectorAll(".option");
+                        allOptions.forEach((option, index) => {
+                            if (index === correctIndex) {
+                                option.classList.add("correct");
+                            }
+                            option.removeEventListener("click", selectOption);
+                        });
+                        // 重置连击
+                        combo = 0;
+                        comboElement.textContent = combo;
+                    }
+                }
+            }, 1000);
+        }
+
+        // 选择选项
+        function selectOption(e) {
+            if (answered) return;
+            answered = true;
+            clearInterval(timer);
+
+            const selectedIndex = parseInt(e.target.dataset.index);
+            const correctIndex = currentQuestions[currentQuestionIndex].answer;
+            const allOptions = document.querySelectorAll(".option");
+
+            // 标记正确/错误选项
+            allOptions.forEach((option, index) => {
+                if (index === correctIndex) {
+                    option.classList.add("correct");
+                } else if (index === selectedIndex && index !== correctIndex) {
+                    option.classList.add("wrong");
+                }
+                option.removeEventListener("click", selectOption);
+            });
+
+            // 更新得分和连击
+            if (selectedIndex === correctIndex) {
+                // 根据难度和剩余时间加分
+                const timeScore = Math.floor(timeLeft * (currentDifficulty === "easy" ? 1 : currentDifficulty === "medium" ? 2 : 3));
+                const baseScore = currentDifficulty === "easy" ? 10 : currentDifficulty === "medium" ? 20 : 30;
+                score += baseScore + timeScore;
+                
+                // 更新连击
+                combo++;
+                maxCombo = Math.max(maxCombo, combo);
+                
+                // 连击加分
+                if (combo >= 3) {
+                    score += combo * 5; // 连击奖励
+                }
+            } else {
+                // 答错重置连击
+                combo = 0;
+            }
+
+            // 更新显示
+            scoreElement.textContent = score;
+            comboElement.textContent = combo;
+        }
+
+        // 下一题
+        function nextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < currentQuestions.length) {
+                loadQuestion();
+            } else {
+                showResult();
+            }
+        }
+
+        // 显示最终结果
+        function showResult() {
+            // 保存成绩到本地存储
+            const levelText = currentDifficulty === "easy" ? "简单" : currentDifficulty === "medium" ? "中等" : "困难";
+            const result = {
+                score: score,
+                maxCombo: maxCombo,
+                difficulty: levelText,
+                date: new Date().toLocaleString()
+            };
+            gameHistory.push(result);
+            // 只保留最近10条记录
+            if (gameHistory.length > 10) {
+                gameHistory.shift();
+            }
+            localStorage.setItem("networkGameHistory", JSON.stringify(gameHistory));
+
+            // 更新结果显示
+            finalScoreElement.textContent = score;
+            maxComboElement.textContent = maxCombo;
+            
+            // 根据得分显示评价
+            const totalPossibleScore = currentDifficulty === "easy" ? 450 : currentDifficulty === "medium" ? 900 : 1350;
+            const scoreRatio = score / totalPossibleScore;
+            
+            if (scoreRatio >= 0.8) {
+                resultDescElement.textContent = "🎉 太棒了！你是网络知识大神！";
+            } else if (scoreRatio >= 0.6) {
+                resultDescElement.textContent = "👍 很不错！继续努力就能成为网络高手！";
+            } else if (scoreRatio >= 0.4) {
+                resultDescElement.textContent = "💪 还可以！多复习一下核心知识点吧！";
+            } else {
+                resultDescElement.textContent = "📖 加油！建议重新学习网络基础知识！";
+            }
+
+            // 生成历史成绩列表
+            renderRankList();
+
+            // 切换界面
+            gameContainer.style.display = "none";
+            resultScreen.style.display = "block";
+        }
+
+        // 渲染历史成绩
+        function renderRankList() {
+            rankList.innerHTML = "";
+            // 按得分降序排序
+            const sortedHistory = [...gameHistory].sort((a, b) => b.score - a.score);
+            
+            sortedHistory.forEach((item, index) => {
+                const rankItem = document.createElement("div");
+                rankItem.className = "rank-item";
+                rankItem.innerHTML = `
+                    <span>${index + 1}. ${item.date}</span>
+                    <span>难度：${item.difficulty} | 得分：${item.score} | 连击：${item.maxCombo}</span>
+                `;
+                rankList.appendChild(rankItem);
+            });
+            
+            // 如果没有历史记录
+            if (sortedHistory.length === 0) {
+                rankList.innerHTML = "<div class='rank-item'>暂无游戏记录</div>";
+            }
+        }
+
+        // 绑定事件
+        startBtn.addEventListener("click", initGame);
+        restartBtn.addEventListener("click", initGame);
+        nextBtn.addEventListener("click", nextQuestion);
+
+        // 初始化历史成绩显示
+        renderRankList();
+    </script>
+</body>
+</html>
