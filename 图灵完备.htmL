@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>逻辑之门 - 图灵完备小游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background: #1a1a2e;
+            color: white;
+            padding: 20px;
+        }
+
+        .game-container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .level-info {
+            text-align: center;
+            font-size: 18px;
+            margin: 10px 0;
+            color: #4cc9f0;
+        }
+
+        /* 游戏区域布局 */
+        .game-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        /* 输入开关 */
+        .input-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .switch {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 3px solid #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .switch.on {
+            background: #00ff00;
+            color: black;
+        }
+
+        .switch.off {
+            background: #ff0000;
+            color: white;
+        }
+
+        /* 逻辑门工作台 */
+        .workbench {
+            width: 500px;
+            height: 300px;
+            border: 2px dashed #666;
+            position: relative;
+            background: #16213e;
+        }
+
+        /* 逻辑门样式 */
+        .logic-gate {
+            width: 80px;
+            height: 50px;
+            background: #0f3460;
+            border: 2px solid #4cc9f0;
+            border-radius: 5px;
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: grab;
+            user-select: none;
+        }
+
+        /* 输出灯泡 */
+        .output-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .bulb {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #333;
+            border: 3px solid #fff;
+        }
+
+        .bulb.on {
+            background: #ffff00;
+            box-shadow: 0 0 20px #ffff00;
+        }
+
+        /* 逻辑门选择区 */
+        .gate-selector {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .gate-btn {
+            padding: 10px 20px;
+            background: #0f3460;
+            border: 2px solid #4cc9f0;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .gate-btn:hover {
+            background: #1a508b;
+        }
+
+        /* 按钮 */
+        .control-btn {
+            display: block;
+            margin: 20px auto;
+            padding: 12px 30px;
+            background: #e94560;
+            border: none;
+            color: white;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .control-btn:hover {
+            background: #ff2e63;
+        }
+
+        .tip {
+            text-align: center;
+            color: #ccc;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="header">
+            <h1>逻辑之门 · 图灵完备闯关</h1>
+            <p>拼接逻辑门，点亮目标灯泡！</p>
+        </div>
+
+        <div class="level-info">
+            第 <span id="level">1</span> 关 | 目标输出：<span id="target">1</span>
+        </div>
+
+        <!-- 游戏核心区域 -->
+        <div class="game-area">
+            <!-- 输入开关 -->
+            <div class="input-panel">
+                <div class="switch on" id="switchA" onclick="toggleSwitch('A')">A=1</div>
+                <div class="switch off" id="switchB" onclick="toggleSwitch('B')">B=0</div>
+            </div>
+
+            <!-- 逻辑门拼接台 -->
+            <div class="workbench" id="workbench"></div>
+
+            <!-- 输出灯泡 -->
+            <div class="output-panel">
+                <div class="bulb" id="bulb"></div>
+            </div>
+        </div>
+
+        <!-- 逻辑门选择 -->
+        <div class="gate-selector">
+            <div class="gate-btn" onclick="addGate('NOT')">非门</div>
+            <div class="gate-btn" onclick="addGate('AND')">与门</div>
+            <div class="gate-btn" onclick="addGate('OR')">或门</div>
+        </div>
+
+        <button class="control-btn" onclick="checkCircuit()">运行电路</button>
+        <button class="control-btn" onclick="nextLevel()">下一关</button>
+        <button class="control-btn" onclick="resetGame()">重置</button>
+
+        <div class="tip">
+            提示：图灵完备 = 基础逻辑门可组合出任意计算逻辑
+        </div>
+    </div>
+
+    <script>
+        // 游戏数据
+        let game = {
+            level: 1,
+            switchA: 1,
+            switchB: 0,
+            gates: [],
+            targets: [1, 0, 1], // 三关目标输出
+            currentOutput: 0
+        };
+
+        // 切换开关状态（0/1）
+        function toggleSwitch(sw) {
+            let elem = document.getElementById('switch'+sw);
+            if(sw === 'A') game.switchA = game.switchA ? 0 : 1;
+            if(sw === 'B') game.switchB = game.switchB ? 0 : 1;
+            
+            elem.classList.toggle('on');
+            elem.classList.toggle('off');
+            elem.innerText = sw + '=' + (sw==='A' ? game.switchA : game.switchB);
+        }
+
+        // 添加逻辑门到工作台
+        function addGate(type) {
+            let bench = document.getElementById('workbench');
+            let gate = document.createElement('div');
+            gate.className = 'logic-gate';
+            gate.innerText = type;
+            gate.style.left = '50px';
+            gate.style.top = '50px';
+            
+            // 拖拽功能
+            makeDraggable(gate);
+            
+            bench.appendChild(gate);
+            game.gates.push({type, elem: gate});
+        }
+
+        // 拖拽元素
+        function makeDraggable(elem) {
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            elem.onmousedown = dragStart;
+
+            function dragStart(e) {
+                e.preventDefault();
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                document.onmouseup = dragEnd;
+                document.onmousemove = dragMove;
+            }
+
+            function dragMove(e) {
+                e.preventDefault();
+                pos1 = pos3 - e.clientX;
+                pos2 = pos4 - e.clientY;
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                elem.style.top = (elem.offsetTop - pos2) + "px";
+                elem.style.left = (elem.offsetLeft - pos1) + "px";
+            }
+
+            function dragEnd() {
+                document.onmouseup = null;
+                document.onmousemove = null;
+            }
+        }
+
+        // 计算电路输出（核心：图灵逻辑运算）
+        function checkCircuit() {
+            let a = game.switchA;
+            let b = game.switchB;
+            let out = 0;
+
+            // 遍历逻辑门计算结果
+            game.gates.forEach(gate => {
+                switch(gate.type) {
+                    case 'NOT': out = !a ? 1 : 0; break;
+                    case 'AND': out = a && b ? 1 : 0; break;
+                    case 'OR': out = a || b ? 1 : 0; break;
+                }
+            });
+
+            game.currentOutput = out;
+            updateBulb();
+            checkWin();
+        }
+
+        // 更新灯泡状态
+        function updateBulb() {
+            let bulb = document.getElementById('bulb');
+            if(game.currentOutput) {
+                bulb.classList.add('on');
+            } else {
+                bulb.classList.remove('on');
+            }
+        }
+
+        // 检查是否通关
+        function checkWin() {
+            let target = game.targets[game.level-1];
+            if(game.currentOutput === target) {
+                alert('🎉 恭喜通关！你掌握了图灵完备基础逻辑！');
+            } else {
+                alert('❌ 输出错误，请重新拼接逻辑门！');
+            }
+        }
+
+        // 下一关
+        function nextLevel() {
+            if(game.level >= 3) {
+                alert('🏆 恭喜通关全部关卡！你理解了图灵完备的核心！');
+                return;
+            }
+            game.level++;
+            game.gates = [];
+            document.getElementById('workbench').innerHTML = '';
+            document.getElementById('level').innerText = game.level;
+            document.getElementById('target').innerText = game.targets[game.level-1];
+        }
+
+        // 重置游戏
+        function resetGame() {
+            game = {level:1, switchA:1, switchB:0, gates:[], targets:[1,0,1], currentOutput:0};
+            document.getElementById('level').innerText = 1;
+            document.getElementById('target').innerText = 1;
+            document.getElementById('workbench').innerHTML = '';
+            document.getElementById('bulb').classList.remove('on');
+            
+            document.getElementById('switchA').className = 'switch on';
+            document.getElementById('switchA').innerText = 'A=1';
+            document.getElementById('switchB').className = 'switch off';
+            document.getElementById('switchB').innerText = 'B=0';
+        }
+    </script>
+</body>
+</html>
