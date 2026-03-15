@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maxwell's Equations: Field Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&display=swap');
+        
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #050508;
+            font-family: 'Rajdhani', sans-serif;
+            color: #e0e0ff;
+        }
+        
+        canvas {
+            display: block;
+            cursor: crosshair;
+        }
+        
+        .glass-panel {
+            background: rgba(10, 15, 30, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(100, 150, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+        
+        .neon-text {
+            font-family: 'Orbitron', sans-serif;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+        
+        .control-btn {
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .control-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .control-btn:hover::before {
+            left: 100%;
+        }
+        
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 200, 255, 0.4);
+        }
+        
+        .slider {
+            -webkit-appearance: none;
+            appearance: none;
+            background: rgba(100, 150, 255, 0.2);
+            height: 4px;
+            border-radius: 2px;
+            outline: none;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #00d4ff;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.8);
+        }
+        
+        .equation-display {
+            font-family: 'Courier New', monospace;
+            opacity: 0.8;
+        }
+        
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+        
+        .pulse {
+            animation: pulse-glow 2s infinite;
+        }
+    </style>
+</head>
+<body>
+
+<!-- 主画布 -->
+<canvas id="simCanvas"></canvas>
+
+<!-- UI 界面 -->
+<div class="absolute top-0 left-0 w-full h-full pointer-events-none">
+    
+    <!-- 标题区域 -->
+    <div class="absolute top-6 left-6 pointer-events-auto">
+        <h1 class="neon-text text-4xl font-bold text-cyan-400 mb-2 tracking-wider">MAXWELL FIELD</h1>
+        <div class="text-xs text-blue-300 opacity-70 space-y-1 equation-display">
+            <div>∇·E = ρ/ε₀ (Gauss's Law)</div>
+            <div>∇·B = 0 (No Monopoles)</div>
+            <div>∇×E = -∂B/∂t (Faraday's Law)</div>
+            <div>∇×B = μ₀J + μ₀ε₀∂E/∂t (Ampère-Maxwell)</div>
+        </div>
+    </div>
+
+    <!-- 控制面板 -->
+    <div class="absolute top-6 right-6 w-80 glass-panel rounded-xl p-6 pointer-events-auto">
+        <h2 class="neon-text text-xl font-bold mb-4 text-cyan-300 border-b border-cyan-900 pb-2">FIELD CONTROLS</h2>
+        
+        <!-- 模式选择 -->
+        <div class="mb-6 space-y-2">
+            <label class="text-xs text-blue-400 uppercase tracking-widest">Source Type</label>
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="setMode('charge')" id="btn-charge" class="control-btn bg-blue-900/50 hover:bg-blue-800 text-cyan-300 py-2 px-4 rounded border border-blue-700 text-sm font-semibold active">
+                    ⚡ Charge
+                </button>
+                <button onclick="setMode('magnet')" id="btn-magnet" class="control-btn bg-gray-800/50 hover:bg-gray-700 text-gray-400 py-2 px-4 rounded border border-gray-600 text-sm font-semibold">
+                    🧲 Magnet
+                </button>
+                <button onclick="setMode('dipole')" id="btn-dipole" class="control-btn bg-gray-800/50 hover:bg-gray-700 text-gray-400 py-2 px-4 rounded border border-gray-600 text-sm font-semibold">
+                    〰️ Dipole
+                </button>
+                <button onclick="setMode('eraser')" id="btn-eraser" class="control-btn bg-red-900/30 hover:bg-red-800/50 text-red-300 py-2 px-4 rounded border border-red-800 text-sm font-semibold">
+                    🗑️ Clear
+                </button>
+            </div>
+        </div>
+
+        <!-- 参数控制 -->
+        <div class="mb-6 space-y-4">
+            <div>
+                <div class="flex justify-between text-xs mb-1">
+                    <span class="text-blue-400">Field Strength</span>
+                    <span id="strength-val" class="text-cyan-300">1.0</span>
+                </div>
+                <input type="range" min="0.1" max="3" step="0.1" value="1" class="slider w-full" oninput="updateStrength(this.value)">
+            </div>
+            
+            <div>
+                <div class="flex justify-between text-xs mb-1">
+                    <span class="text-blue-400">Wave Speed (c)</span>
+                    <span id="speed-val" class="text-cyan-300">1.0</span>
+                </div>
+                <input type="range" min="0.1" max="2" step="0.1" value="1" class="slider w-full" oninput="updateSpeed(this.value)">
+            </div>
+            
+            <div>
+                <div class="flex justify-between text-xs mb-1">
+                    <span class="text-blue-400">Damping</span>
+                    <span id="damping-val" class="text-cyan-300">0.98</span>
+                </div>
+                <input type="range" min="0.90" max="0.999" step="0.001" value="0.98" class="slider w-full" oninput="updateDamping(this.value)">
+            </div>
+        </div>
+
+        <!-- 统计信息 -->
+        <div class="border-t border-blue-900 pt-4 space-y-2 text-xs">
+            <div class="flex justify-between">
+                <span class="text-gray-500">Entities:</span>
+                <span id="entity-count" class="text-cyan-400 font-mono">0</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-gray-500">Field Energy:</span>
+                <span id="field-energy" class="text-yellow-400 font-mono pulse">0.00</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-gray-500">FPS:</span>
+                <span id="fps-counter" class="text-green-400 font-mono">60</span>
+            </div>
+        </div>
+
+        <button onclick="clearAll()" class="mt-4 w-full control-btn bg-red-900/20 hover:bg-red-900/40 text-red-400 border border-red-800/50 py-2 rounded text-xs uppercase tracking-widest">
+            Reset Simulation
+        </button>
+    </div>
+
+    <!-- 操作提示 -->
+    <div class="absolute bottom-6 left-6 glass-panel rounded-lg px-4 py-3 pointer-events-auto max-w-md">
+        <div class="text-xs text-blue-300 space-y-1">
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 bg-cyan-400 rounded-full"></span>
+                <span><strong>Click</strong> to place field sources</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 bg-purple-400 rounded-full"></span>
+                <span><strong>Drag</strong> to create moving charges (current)</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 bg-yellow-400 rounded-full"></span>
+                <span><strong>Right-click</strong> to remove sources</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+/**
+ * Maxwell's Equations Field Simulator
+ * 基于麦克斯韦方程组的电磁场模拟
+ * 
+ * 核心物理模型：
+ * 1. 电场 E 由电荷产生 (Gauss's Law)
+ * 2. 磁场 B 由电流/变化电场产生 (Ampère's Law)
+ * 3. 变化的磁场产生涡旋电场 (Faraday's Law)
+ * 4. 电磁波传播模拟
+ */
+
+const canvas = document.getElementById('simCanvas');
+const ctx = canvas.getContext('2d');
+
+// 模拟参数
+let width, height;
+let gridSize = 20; // 场网格大小
+let fieldStrength = 1.0;
+let waveSpeed = 1.0;
+let damping = 0.98;
+let currentMode = 'charge';
+
+// 物理实体
+let charges = []; // 电荷 {x, y, q, vx, vy}
+let magnets = []; // 磁偶极子 {x, y, m, angle}
+let dipoles = []; // 振荡偶极子 {x, y, freq, phase}
+let particles = []; // 测试粒子
+
+// 场网格 (用于波动方程)
+let Ex = [], Ey = []; // 电场分量
+let Bz = []; // 磁场 (垂直于平面)
+let Ex_prev = [], Ey_prev = [];
+let Bz_prev = [];
+
+// 鼠标状态
+let mouse = { x: 0, y: 0, down: false, rightDown: false };
+let lastMouse = { x: 0, y: 0 };
+
+// 初始化
+function init() {
+    resize();
+    window.addEventListener('resize', resize);
+    
+    // 初始化场数组
+    initFields();
+    
+    // 事件监听
+    canvas.addEventListener('mousedown', onMouseDown);
+    canvas.addEventListener('mousemove', onMouseMove);
+    canvas.addEventListener('mouseup', onMouseUp);
+    canvas.addEventListener('contextmenu', e => e.preventDefault());
+    
+    // 添加初始示例
+    addCharge(width/2 - 100, height/2, 1);
+    addCharge(width/2 + 100, height/2, -1);
+    
+    requestAnimationFrame(loop);
+}
+
+function resize() {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+    initFields();
+}
+
+function initFields() {
+    const cols = Math.ceil(width / gridSize) + 1;
+    const rows = Math.ceil(height / gridSize) + 1;
+    
+    Ex = new Float32Array(cols * rows);
+    Ey = new Float32Array(cols * rows);
+    Bz = new Float32Array(cols * rows);
+    Ex_prev = new Float32Array(cols * rows);
+    Ey_prev = new Float32Array(cols * rows);
+    Bz_prev = new Float32Array(cols * rows);
+}
+
+// 实体管理
+function addCharge(x, y, q) {
+    charges.push({
+        x, y, q: q * fieldStrength,
+        vx: 0, vy: 0,
+        radius: 15,
+        pulse: 0
+    });
+    updateEntityCount();
+}
+
+function addMagnet(x, y) {
+    magnets.push({
+        x, y,
+        m: fieldStrength * 2,
+        angle: 0,
+        radius: 20
+    });
+    updateEntityCount();
+}
+
+function addDipole(x, y) {
+    dipoles.push({
+        x, y,
+        freq: 0.05,
+        phase: 0,
+        amplitude: fieldStrength
+    });
+    updateEntityCount();
+}
+
+function removeEntity(x, y) {
+    const threshold = 30;
+    charges = charges.filter(c => Math.hypot(c.x - x, c.y - y) > threshold);
+    magnets = magnets.filter(m => Math.hypot(m.x - x, m.y - y) > threshold);
+    dipoles = dipoles.filter(d => Math.hypot(d.x - x, d.y - y) > threshold);
+    updateEntityCount();
+}
+
+function clearAll() {
+    charges = [];
+    magnets = [];
+    dipoles = [];
+    particles = [];
+    initFields();
+    updateEntityCount();
+}
+
+function updateEntityCount() {
+    const count = charges.length + magnets.length + dipoles.length;
+    document.getElementById('entity-count').textContent = count;
+}
+
+// 物理计算
+function updatePhysics() {
+    const cols = Math.ceil(width / gridSize);
+    const rows = Math.ceil(height / gridSize);
+    
+    // 保存旧场
+    Ex_prev.set(Ex);
+    Ey_prev.set(Ey);
+    Bz_prev.set(Bz);
+    
+    // 波动方程求解 (简化 Maxwell 方程组)
+    // ∇²E = μ₀ε₀ ∂²E/∂t² (真空中的波动方程)
+    
+    const c2 = waveSpeed * waveSpeed * 0.5; //  Courant condition 调整
+    
+    for (let i = 1; i < cols - 1; i++) {
+        for (let j = 1; j < rows - 1; j++) {
+            const idx = i * rows + j;
+            
+            // 计算拉普拉斯算子
+            const laplace_Ex = Ex[(i+1)*rows+j] + Ex[(i-1)*rows+j] + Ex[i*rows+(j+1)] + Ex[i*rows+(j-1)] - 4*Ex[idx];
+            const laplace_Ey = Ey[(i+1)*rows+j] + Ey[(i-1)*rows+j] + Ey[i*rows+(j+1)] + Ey[i*rows+(j-1)] - 4*Ey[idx];
+            
+            // 波动方程更新
+            const new_Ex = 2 * Ex[idx] - Ex_prev[idx] + c2 * laplace_Ex;
+            const new_Ey = 2 * Ey[idx] - Ey_prev[idx] + c2 * laplace_Ey;
+            
+            Ex[idx] = new_Ex * damping;
+            Ey[idx] = new_Ey * damping;
+        }
+    }
+    
+    // 添加源项 (麦克斯韦方程组的源)
+    charges.forEach(charge => {
+        const gi = Math.floor(charge.x / gridSize);
+        const gj = Math.floor(charge.y / gridSize);
+        const idx = gi * rows + gj;
+        
+        if (gi > 0 && gi < cols-1 && gj > 0 && gj < rows-1) {
+            // 电荷产生径向电场 (Gauss's Law)
+            const dx = charge.x - (gi * gridSize);
+            const dy = charge.y - (gj * gridSize);
+            const dist = Math.sqrt(dx*dx + dy*dy) + 0.1;
+            
+            const E_mag = charge.q * 50 / (dist * dist + 100);
+            Ex[idx] += (dx / dist) * E_mag;
+            Ey[idx] += (dy / dist) * E_mag;
+            
+            // 运动电荷产生磁场 (Ampère's Law)
+            if (Math.abs(charge.vx) > 0.1 || Math.abs(charge.vy) > 0.1) {
+                Bz[idx] += (charge.vx * dy - charge.vy * dx) * 0.1 * charge.q;
+            }
+        }
+    });
+    
+    // 磁偶极子场
+    magnets.forEach(mag => {
+        const gi = Math.floor(mag.x / gridSize);
+        const gj = Math.floor(mag.y / gridSize);
+        
+        if (gi > 1 && gi < cols-2 && gj > 1 && gj < rows-2) {
+            // 磁偶极子产生环形磁场
+            for (let di = -2; di <= 2; di++) {
+                for (let dj = -2; dj <= 2; dj++) {
+                    const idx = (gi+di) * rows + (gj+dj);
+                    const dx = di * gridSize;
+                    const dy = dj * gridSize;
+                    const dist = Math.sqrt(dx*dx + dy*dy) + 1;
+                    
+                    // 环形磁场
+                    const B_mag = mag.m * 20 / (dist*dist + 50);
+                    const angle = Math.atan2(dy, dx);
+                    const tangent_x = -Math.sin(angle);
+                    const tangent_y = Math.cos(angle);
+                    
+                    Ex[idx] += tangent_x * B_mag * 0.1; // 感应电场
+                    Ey[idx] += tangent_y * B_mag * 0.1;
+                    Bz[idx] += B_mag;
+                }
+            }
+        }
+    });
+    
+    // 振荡偶极子 (电磁波源)
+    dipoles.forEach(dip => {
+        dip.phase += dip.freq;
+        const oscillation = Math.sin(dip.phase) * dip.amplitude * 2;
+        
+        const gi = Math.floor(dip.x / gridSize);
+        const gj = Math.floor(dip.y / gridSize);
+        
+        if (gi > 2 && gi < cols-2 && gj > 2 && gj < rows-2) {
+            // 向外辐射的球面波
+            for (let di = -3; di <= 3; di++) {
+                for (let dj = -3; dj <= 3; dj++) {
+                    const idx = (gi+di) * rows + (gj+dj);
+                    const dist = Math.sqrt(di*di + dj*dj) + 0.1;
+                    if (dist < 3) {
+                        const wave = oscillation * Math.exp(-dist * 0.5);
+                        Ex[idx] += wave * (di / dist);
+                        Ey[idx] += wave * (dj / dist);
+                    }
+                }
+            }
+        }
+    });
+    
+    // 计算总场能量
+    let energy = 0;
+    for (let i = 0; i < Ex.length; i++) {
+        energy += Ex[i]*Ex[i] + Ey[i]*Ey[i] + Bz[i]*Bz[i];
+    }
+    document.getElementById('field-energy').textContent = (energy * 0.0001).toFixed(2);
+}
+
+// 渲染
+function render() {
+    // 拖尾效果
+    ctx.fillStyle = 'rgba(5, 5, 8, 0.3)';
+    ctx.fillRect(0, 0, width, height);
+    
+    // 绘制场线
+    drawFieldLines();
+    
+    // 绘制实体
+    drawEntities();
+    
+    // 绘制粒子轨迹
+    drawParticles();
+}
+
+function drawFieldLines() {
+    const cols = Math.ceil(width / gridSize);
+    const rows = Math.ceil(height / gridSize);
+    
+    ctx.lineWidth = 1;
+    
+    // 采样绘制场线
+    const step = 2;
+    for (let i = 0; i < cols; i += step) {
+        for (let j = 0; j < rows; j += step) {
+            const idx = i * rows + j;
+            const x = i * gridSize;
+            const y = j * gridSize;
+            
+            const ex = Ex[idx];
+            const ey = Ey[idx];
+            const bz = Bz[idx];
+            
+            const E_mag = Math.sqrt(ex*ex + ey*ey);
+            
+            if (E_mag > 0.1) {
+                // 电场颜色：从蓝到红
+                const intensity = Math.min(E_mag * 2, 1);
+                const hue = 240 - intensity * 60; // 240(blue) -> 180(cyan) -> 120(green) -> 60(yellow) -> 0(red)
+                
+                ctx.strokeStyle = `hsla(${hue}, 80%, 60%, ${Math.min(intensity * 0.6, 0.8)})`;
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x + ex * 3, y + ey * 3);
+                ctx.stroke();
+                
+                // 场强箭头
+                if (E_mag > 1) {
+                    const angle = Math.atan2(ey, ex);
+                    const arrLen = 5;
+                    ctx.beginPath();
+                    ctx.moveTo(x + ex * 3, y + ey * 3);
+                    ctx.lineTo(x + ex * 3 - arrLen * Math.cos(angle - 0.5), y + ey * 3 - arrLen * Math.sin(angle - 0.5));
+                    ctx.moveTo(x + ex * 3, y + ey * 3);
+                    ctx.lineTo(x + ex * 3 - arrLen * Math.cos(angle + 0.5), y + ey * 3 - arrLen * Math.sin(angle + 0.5));
+                    ctx.stroke();
+                }
+            }
+            
+            // 磁场可视化 (用圆圈大小表示)
+            if (Math.abs(bz) > 0.5) {
+                const radius = Math.min(Math.abs(bz) * 2, 15);
+                ctx.fillStyle = bz > 0 ? `rgba(255, 0, 255, ${Math.min(Math.abs(bz)*0.1, 0.4)})` : `rgba(0, 255, 100, ${Math.min(Math.abs(bz)*0.1, 0.4)})`;
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 磁场方向标记
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                ctx.font = '10px Arial';
+                ctx.fillText(bz > 0 ? '⊗' : '⊙', x - 3, y + 3);
+            }
+        }
+    }
+}
+
+function drawEntities() {
+    // 绘制电荷
+    charges.forEach(c => {
+        // 脉冲效果
+        c.pulse += 0.1;
+        const pulseRadius = c.radius + Math.sin(c.pulse) * 3;
+        
+        // 光晕
+        const gradient = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, pulseRadius * 2);
+        if (c.q > 0) {
+            gradient.addColorStop(0, 'rgba(255, 100, 100, 1)');
+            gradient.addColorStop(0.5, 'rgba(255, 50, 50, 0.5)');
+            gradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
+        } else {
+            gradient.addColorStop(0, 'rgba(100, 100, 255, 1)');
+            gradient.addColorStop(0.5, 'rgba(50, 50, 255, 0.5)');
+            gradient.addColorStop(1, 'rgba(0, 0, 255, 0)');
+        }
+        
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, pulseRadius * 2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // 核心
+        ctx.fillStyle = c.q > 0 ? '#ff4444' : '#4444ff';
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, c.radius * 0.6, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // 符号
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 16px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(c.q > 0 ? '+' : '-', c.x, c.y);
+        
+        // 速度向量
+        if (Math.abs(c.vx) > 0.1 || Math.abs(c.vy) > 0.1) {
+            ctx.strokeStyle = 'yellow';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(c.x, c.y);
+            ctx.lineTo(c.x + c.vx * 10, c.y + c.vy * 10);
+            ctx.stroke();
+        }
+    });
+    
+    // 绘制磁铁
+    magnets.forEach(m => {
+        ctx.save();
+        ctx.translate(m.x, m.y);
+        
+        // 磁场线示意
+        ctx.strokeStyle = 'rgba(255, 0, 255, 0.3)';
+        ctx.lineWidth = 2;
+        for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(Math.cos(angle) * 40, Math.sin(angle) * 40);
+            ctx.stroke();
+        }
+        
+        // 磁铁本体
+        ctx.fillStyle = '#aa00aa';
+        ctx.beginPath();
+        ctx.arc(0, 0, m.radius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = 'white';
+        ctx.font = '20px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('M', 0, 0);
+        
+        ctx.restore();
+    });
+    
+    // 绘制偶极子
+    dipoles.forEach(d => {
+        const size = 20 + Math.sin(d.phase) * 5;
+        
+        ctx.strokeStyle = 'cyan';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, size, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // 振荡指示
+        ctx.fillStyle = `rgba(0, 255, 255, ${0.5 + Math.sin(d.phase) * 0.3})`;
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, 5, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = 'cyan';
+        ctx.font = '12px Arial';
+        ctx.fillText('~', d.x - 3, d.y - 25);
+    });
+}
+
+function drawParticles() {
+    // 添加新测试粒子
+    if (mouse.down && currentMode === 'charge' && Math.random() > 0.8) {
+        particles.push({
+            x: mouse.x + (Math.random() - 0.5) * 20,
+            y: mouse.y + (Math.random() - 0.5) * 20,
+            vx: 0, vy: 0,
+            life: 100,
+            color: `hsl(${Math.random() * 60 + 180}, 100%, 70%)`
+        });
+    }
+    
+    // 更新和绘制粒子
+    particles = particles.filter(p => {
+        // 在电场中受力 F = qE
+        const gi = Math.floor(p.x / gridSize);
+        const gj = Math.floor(p.y / gridSize);
+        const rows = Math.ceil(height / gridSize);
+        const idx = gi * rows + gj;
+        
+        if (idx >= 0 && idx < Ex.length) {
+            p.vx += Ex[idx] * 0.01;
+            p.vy += Ey[idx] * 0.01;
+        }
+        
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life--;
+        
+        // 绘制
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.life / 100;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        
+        return p.life > 0 && p.x > 0 && p.x < width && p.y > 0 && p.y < height;
+    });
+}
+
+// 交互处理
+function onMouseDown(e) {
+    if (e.button === 2) {
+        mouse.rightDown = true;
+        removeEntity(e.clientX, e.clientY);
+    } else {
+        mouse.down = true;
+        lastMouse.x = e.clientX;
+        lastMouse.y = e.clientY;
+        
+        if (currentMode === 'charge') {
+            addCharge(e.clientX, e.clientY, e.shiftKey ? -1 : 1);
+        } else if (currentMode === 'magnet') {
+            addMagnet(e.clientX, e.clientY);
+        } else if (currentMode === 'dipole') {
+            addDipole(e.clientX, e.clientY);
+        }
+    }
+}
+
+function onMouseMove(e) {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+    
+    if (mouse.down && currentMode === 'charge' && charges.length > 0) {
+        // 拖动最后一个电荷创建电流
+        const lastCharge = charges[charges.length - 1];
+        const dx = e.clientX - lastMouse.x;
+        const dy = e.clientY - lastMouse.y;
+        lastCharge.vx = dx * 0.5;
+        lastCharge.vy = dy * 0.5;
+        lastCharge.x = e.clientX;
+        lastCharge.y = e.clientY;
+    }
+    
+    lastMouse.x = e.clientX;
+    lastMouse.y = e.clientY;
+}
+
+function onMouseUp() {
+    mouse.down = false;
+    mouse.rightDown = false;
+}
+
+// UI 控制
+function setMode(mode) {
+    currentMode = mode;
+    document.querySelectorAll('.control-btn').forEach(btn => {
+        btn.classList.remove('bg-blue-900/50', 'text-cyan-300', 'border-blue-700');
+        btn.classList.add('bg-gray-800/50', 'text-gray-400', 'border-gray-600');
+    });
+    
+    const activeBtn = document.getElementById(`btn-${mode}`);
+    activeBtn.classList.remove('bg-gray-800/50', 'text-gray-400', 'border-gray-600');
+    activeBtn.classList.add('bg-blue-900/50', 'text-cyan-300', 'border-blue-700');
+}
+
+function updateStrength(val) {
+    fieldStrength = parseFloat(val);
+    document.getElementById('strength-val').textContent = val;
+}
+
+function updateSpeed(val) {
+    waveSpeed = parseFloat(val);
+    document.getElementById('speed-val').textContent = val;
+}
+
+function updateDamping(val) {
+    damping = parseFloat(val);
+    document.getElementById('damping-val').textContent = val;
+}
+
+// 主循环
+let lastTime = 0;
+let frameCount = 0;
+let lastFpsTime = 0;
+
+function loop(timestamp) {
+    // FPS 计算
+    frameCount++;
+    if (timestamp - lastFpsTime >= 1000) {
+        document.getElementById('fps-counter').textContent = frameCount;
+        frameCount = 0;
+        lastFpsTime = timestamp;
+    }
+    
+    updatePhysics();
+    render();
+    requestAnimationFrame(loop);
+}
+
+// 启动
+init();
+</script>
+
+</body>
+</html>
