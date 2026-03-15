@@ -1,0 +1,660 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>中本聪身份之谜——区块链悬案</title>
+    <style>
+        /* 全局样式重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", "Heiti SC", sans-serif;
+        }
+        body {
+            background-color: #121218;
+            color: #e0e0e0;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+        /* 隐藏滚动条 */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+        /* 容器样式 */
+        .container {
+            width: 100%;
+            height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+        /* 页面通用样式 */
+        .page {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            transition: all 0.5s ease;
+        }
+        .page.active {
+            display: flex;
+        }
+        /* 标题样式 */
+        .title {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            background: linear-gradient(90deg, #4a90e2, #6a11cb);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-align: center;
+        }
+        .subtitle {
+            font-size: 18px;
+            color: #a0a0a0;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        /* 按钮样式 */
+        .btn {
+            width: 200px;
+            height: 50px;
+            background: linear-gradient(90deg, #4a90e2, #6a11cb);
+            border: none;
+            border-radius: 25px;
+            color: #fff;
+            font-size: 18px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            margin: 10px 0;
+        }
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(74, 144, 226, 0.5);
+        }
+        .btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        /* 首页样式 */
+        #homePage {
+            background: linear-gradient(135deg, #121218, #1e1e2f);
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><text x="0" y="20" fill="%234a90e220" font-size="12">blockchain</text><text x="0" y="40" fill="%236a11cb20" font-size="12">bitcoin</text><text x="0" y="60" fill="%234a90e220" font-size="12">satoshi</text><text x="0" y="80" fill="%236a11cb20" font-size="12">2009</text></svg>');
+            background-repeat: repeat;
+            background-size: 200px;
+        }
+        .home-logo {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            background: rgba(74, 144, 226, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 40px;
+            border: 1px solid rgba(74, 144, 226, 0.3);
+        }
+        .home-logo svg {
+            width: 120px;
+            height: 120px;
+            fill: #4a90e2;
+        }
+        .home-desc {
+            font-size: 16px;
+            color: #a0a0a0;
+            text-align: center;
+            margin-bottom: 50px;
+            max-width: 80%;
+            line-height: 1.6;
+        }
+        .home-footer {
+            position: absolute;
+            bottom: 20px;
+            font-size: 12px;
+            color: #777;
+            text-align: center;
+        }
+        .volume-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: 1px solid rgba(74, 144, 226, 0.3);
+        }
+        .volume-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: #4a90e2;
+        }
+        /* 剧情引导页样式 */
+        #storyPage {
+            background-color: #121218;
+            padding: 30px 20px;
+        }
+        .story-container {
+            width: 100%;
+            max-width: 800px;
+            height: 80%;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 30px;
+            overflow-y: auto;
+            position: relative;
+            border: 1px solid rgba(74, 144, 226, 0.2);
+        }
+        .story-content {
+            font-size: 16px;
+            line-height: 1.8;
+            color: #e0e0e0;
+        }
+        .story-content span {
+            opacity: 0;
+            animation: typing 0.1s linear forwards;
+        }
+        @keyframes typing {
+            to {
+                opacity: 1;
+            }
+        }
+        .story-img {
+            width: 100%;
+            max-width: 300px;
+            margin: 20px auto;
+            border-radius: 10px;
+            border: 1px solid rgba(74, 144, 226, 0.3);
+            display: block;
+        }
+        .skip-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 80px;
+            height: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(74, 144, 226, 0.3);
+            border-radius: 15px;
+            color: #e0e0e0;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .skip-btn:hover {
+            background: rgba(74, 144, 226, 0.2);
+        }
+        .story-next-btn {
+            margin-top: 20px;
+        }
+        /* 关卡通用样式 */
+        .level-page {
+            background-color: #121218;
+            padding: 20px;
+        }
+        .level-header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(74, 144, 226, 0.2);
+        }
+        .level-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4a90e2;
+        }
+        .hint-count {
+            font-size: 14px;
+            color: #a0a0a0;
+        }
+        .hint-count span {
+            color: #4a90e2;
+            font-weight: bold;
+        }
+        .level-container {
+            width: 100%;
+            max-width: 800px;
+            height: 70%;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(74, 144, 226, 0.2);
+            overflow-y: auto;
+        }
+        .clue-container {
+            width: 100%;
+            margin-bottom: 30px;
+        }
+        .clue-title {
+            font-size: 18px;
+            color: #4a90e2;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+        .clue-content {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid rgba(74, 144, 226, 0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .clue-content:hover {
+            border-color: rgba(74, 144, 226, 0.5);
+            transform: scale(1.01);
+        }
+        .clue-content img {
+            width: 100%;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .clue-text {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #e0e0e0;
+        }
+        .clue-highlight {
+            color: #4a90e2;
+            font-weight: bold;
+        }
+        .password-container {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .password-input {
+            width: 100%;
+            max-width: 500px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(74, 144, 226, 0.3);
+            border-radius: 25px;
+            padding: 0 20px;
+            color: #e0e0e0;
+            font-size: 16px;
+            margin-bottom: 15px;
+            outline: none;
+        }
+        .password-input:focus {
+            border-color: #4a90e2;
+            box-shadow: 0 0 10px rgba(74, 144, 226, 0.3);
+        }
+        .password-hint {
+            font-size: 14px;
+            color: #a0a0a0;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .password-error {
+            font-size: 14px;
+            color: #ff4d4d;
+            margin-bottom: 10px;
+            display: none;
+            text-align: center;
+        }
+        .password-error.show {
+            display: block;
+            animation: shake 0.5s ease;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-5px); }
+            40%, 80% { transform: translateX(5px); }
+        }
+        .level-toolbar {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .toolbar-btn {
+            width: 120px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(74, 144, 226, 0.3);
+            border-radius: 20px;
+            color: #e0e0e0;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .toolbar-btn:hover {
+            background: rgba(74, 144, 226, 0.2);
+        }
+        .toolbar-btn:disabled {
+            background: #333;
+            border-color: #555;
+            cursor: not-allowed;
+        }
+        /* 关卡1专属样式 */
+        #level1Page .clue-content {
+            position: relative;
+        }
+        #level1Page .clue-highlight {
+            position: relative;
+            cursor: pointer;
+        }
+        #level1Page .clue-highlight::after {
+            content: "";
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background-color: #4a90e2;
+            animation: blink 1.5s infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .email-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(74, 144, 226, 0.1);
+        }
+        .email-from {
+            font-size: 14px;
+            color: #a0a0a0;
+        }
+        .email-date {
+            font-size: 14px;
+            color: #a0a0a0;
+        }
+        .email-subject {
+            font-size: 16px;
+            color: #4a90e2;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+        /* 加载动画样式 */
+        .loading-page {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #121218;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 5px solid rgba(74, 144, 226, 0.2);
+            border-top: 5px solid #4a90e2;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .loading-text {
+            font-size: 16px;
+            color: #4a90e2;
+        }
+        /* 适配手机端基础样式 */
+        @media (max-width: 768px) {
+            .title {
+                font-size: 24px;
+            }
+            .subtitle {
+                font-size: 16px;
+            }
+            .btn {
+                width: 180px;
+                height: 45px;
+                font-size: 16px;
+            }
+            .home-logo {
+                width: 150px;
+                height: 150px;
+            }
+            .home-logo svg {
+                width: 100px;
+                height: 100px;
+            }
+            .story-container {
+                padding: 20px;
+                height: 75%;
+            }
+            .level-container {
+                height: 65%;
+                padding: 15px;
+            }
+            .password-input {
+                max-width: 100%;
+            }
+            .level-toolbar {
+                flex-wrap: wrap;
+                gap: 10px;
+                justify-content: center;
+            }
+            .toolbar-btn {
+                width: 100px;
+                height: 38px;
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+<body&gt;
+    <!-- 加载页面 -->
+    <div class="loading-page" id="loadingPage">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">加载中... 请稍候&lt;/div&gt;
+    &lt;/div&gt;
+
+    <!-- 主容器 -->
+    <div class=&quot;container&quot;&gt;
+        <!-- 首页 -->
+        <div class="page active" id="homePage">
+            <div class="home-logo">
+                <svg viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" stroke-width="2"/>
+                    <text x="50" y="55" text-anchor="middle" font-size="16" font-weight="bold" fill="currentColor">BTC</text>
+                    <path d="M20,50 L80,50" stroke="currentColor" stroke-width="2" stroke-dasharray="5,5"/>
+                    <path d="M50,20 L50,80" stroke="currentColor" stroke-width="2" stroke-dasharray="5,5"/>
+                </svg>
+            </div>
+            <h1 class="title">中本聪身份之谜</h1>
+            <p class="subtitle">区块链悬案 · 密码破解</p>
+            <p class="home-desc">追寻比特币创始人的踪迹，破解隐藏在网络深处的密码，揭开中本聪的真实身份</p>
+            <button class="btn" id="startBtn">开始破解</button>
+            <button class="btn" id="helpBtn" style="background: rgba(255,255,255,0.1); color: #e0e0e0; border: 1px solid rgba(74,144,226,0.3);">游戏帮助</button>
+            <div class="volume-btn" id="volumeBtn">
+                <svg viewBox="0 0 24 24">
+                    <path d="M3,9v6h4l5,5V4L7,9H3z M16.5,12c0-1.77-1.02-3.29-2.5-4.03v8.05C15.48,15.29,16.5,13.77,16.5,12z M14,3.23v2.06c2.89,0.86,5,3.54,5,6.71 s-2.11,5.85-5,6.71v2.06c4.01-0.91,7-4.49,7-8.77S18.01,4.14,14,3.23z"/>
+                </svg>
+            </div>
+            <div class="home-footer">
+                <p>无需下载 · 即点即玩 | 线索源自真实历史</p>
+            </div>
+        &lt;/div&gt;
+
+        <!-- 剧情引导页 -->
+        <div class="page" id="storyPage">
+            <div class="story-container">
+                <button class="skip-btn" id="skipStoryBtn">跳过剧情</button>
+                <div class="story-content" id="storyContent">
+                    【剧情脚本】2010年12月12日，Bitcointalk论坛上，中本聪发布了最后一条发言——“I'm going to be out of touch for a while”（我将暂时失联），提及比特币客户端的小更新后，彻底消失在网络世界中。<br/><br/>
+                    多年来，无数人试图追寻他的踪迹，却只找到零星的网络痕迹：2008年发送给密码学专家的加密邮件、2009年挖出的创世区块中隐藏的报纸铭文（The Times 03/Jan/2009 Chancellor on brink of second bailout for banks）、刻意隐瞒的时区与语言习惯，以及那些被逐一否认的身份猜测（尼克·萨博、哈尔·芬尼等）。<br/><br/>
+                    <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'><rect width='300' height='200' fill='%231e1e2f' rx='10' ry='10'/><rect x='20' y='20' width='260' height='30' fill='%232d2d3f' rx='5' ry='5'/><text x='30' y='40' fill='%234a90e2' font-size='14'>加密U盘 - 中本聪未公开线索</text><rect x='20' y='70' width='260' height='100' fill='%232d2d3f' rx='5' ry='5'/><text x='30' y='90' fill='%23e0e0e0' font-size='12'>• 加密邮件 (2008.10.31)</text><text x='30' y='110' fill='%23e0e0e0' font-size='12'>• 创世区块铭文 (2009.01.03)</text><text x='30' y='130' fill='%23e0e0e0' font-size='12'>• 论坛最后留言 (2010.12.12)</text><text x='30' y='150' fill='%23e0e0e0' font-size='12'>• 隐藏身份碎片 (未知)</text></svg>" class="story-img" alt="加密U盘">
+                    你作为一名专注于网络悬案的密码破解者，偶然获得了一个加密U盘，里面存储着中本聪失踪前留下的未公开线索，这些线索串联起他从2008年发布白皮书到2010年隐退的关键节点。<br/><br/>
+                    你的任务，就是通过破解这些线索，还原中本聪的行为轨迹，推测他的真实身份——是独居的天才程序员？是隐秘的技术团队？还是某个暗藏深意的组织？<br/><br/>
+                    每一次密码破解、每一个线索选择，都会导向不同的身份真相，而最终的答案，始终贴合“中本聪身份成谜”的核心设定，无唯一标准答案。
+                </div>
+                <button class="btn story-next-btn" id="storyNextBtn" style="display: none; margin: 20px auto 0;">开始破解线索</button>
+            </div&gt;
+        &lt;/div&gt;
+
+        <!-- 关卡1：加密邮件之谜 -->
+        <div class="page level-page" id="level1Page">
+            <div class="level-header">
+                <h2 class="level-title">关卡1：加密邮件之谜</h2>
+                <div class="hint-count">提示次数：<span id="hintNum1">3</span>/3</div>
+            </div>
+            <div class="level-container">
+                <div class="clue-container">
+                    <h3 class="clue-title">线索1：加密邮件原文</h3>
+                    <div class="clue-content" id="clue1-1">
+                        <div class="email-header">
+                            <div class="email-from">发件人：satoshi@bitcoin.org</div>
+                            <div class="email-date">日期：2008-10-31 08:15 (UTC)</div>
+                        </div>
+                        <div class="email-subject">主题：A Peer-to-Peer Electronic Cash System（点对点电子现金系统）</div>
+                        <div class="clue-text">
+                            尊敬的密码学专家：<br/><br/>
+                            我设计了一套点对点的电子现金系统，无需依赖第三方信任机构，可实现去中心化交易。附件为系统白皮书，其中包含核心加密算法细节。<br/><br/>
+                            为防止白皮书被篡改，我设置了加密校验码，校验码由<span class="clue-highlight" id="clue1-1-highlight">邮件发送日期的数字组合（不含符号）+ 比特币创世区块的核心数字</span>构成，共8位。<br/><br/>
+                            创世区块相关信息可通过后续线索获取，当前你仅需记住：创世区块的核心数字与“2009”相关，且是4位数字。<br/><br/>
+                            —— 中本聪
+                        </div>
+                    </div>
+                </div>
+                <div class="password-container">
+                    <input type="text" class="password-input" id="password1" placeholder="请输入8位密码" maxlength="8">
+                    <div class="password-hint" id="passwordHint1">提示：邮件日期（数字组合）+ 创世区块核心4位数字（与2009相关）</div>
+                    <div class="password-error" id="passwordError1">密码错误，请重新输入！</div>
+                </div>
+            </div>
+            <div class="level-toolbar">
+                <button class="toolbar-btn" id="hintBtn1">获取提示</button>
+                <button class="toolbar-btn" id="submitBtn1">提交密码</button>
+                <button class="toolbar-btn" id="backpackBtn1">线索背包</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 加载页面逻辑
+        window.onload = function() {
+            setTimeout(function() {
+                document.getElementById('loadingPage').style.display = 'none';
+                document.getElementById('homePage').classList.add('active');
+            }, 1500);
+        };
+
+        // 首页按钮逻辑
+        document.getElementById('startBtn').addEventListener('click', function() {
+            document.getElementById('homePage').classList.remove('active');
+            document.getElementById('storyPage').classList.add('active');
+            // 剧情打字效果
+            typeStory();
+        });
+
+        document.getElementById('helpBtn').addEventListener('click', function() {
+            alert('游戏帮助：\n1. 点击线索可查看详细信息，部分线索有可交互亮点\n2. 输入密码后点击提交，正确即可进入下一关\n3. 提示按钮可获取线索提示，共3次机会\n4. 线索背包可查看已收集的线索，部分线索可组合');
+        });
+
+        // 音量按钮逻辑（模拟）
+        let isMuted = false;
+        document.getElementById('volumeBtn').addEventListener('click', function() {
+            isMuted = !isMuted;
+            alert(isMuted ? '音量已关闭' : '音量已开启');
+        });
+
+        // 剧情页逻辑
+        function typeStory() {
+            const storyContent = document.getElementById('storyContent');
+            const text = storyContent.innerText;
+            storyContent.innerText = '';
+            let index = 0;
+            const timer = setInterval(function() {
+                const span = document.createElement('span');
+                span.innerText = text[index];
+                storyContent.appendChild(span);
+                index++;
+                if (index >= text.length) {
+                    clearInterval(timer);
+                    document.getElementById('storyNextBtn').style.display = 'flex';
+                }
+            }, 30);
+        }
+
+        document.getElementById('skipStoryBtn').addEventListener('click', function() {
+            document.getElementById('storyPage').classList.remove('active');
+            document.getElementById('level1Page').classList.add('active');
+        });
+
+        document.getElementById('storyNextBtn').addEventListener('click', function() {
+            document.getElementById('storyPage').classList.remove('active');
+            document.getElementById('level1Page').classList.add('active');
+        });
+
+        // 关卡1逻辑
+        let hintNum1 = 3;
+        document.getElementById('hintBtn1').addEventListener('click', function() {
+            if (hintNum1 <= 0) {
+                alert('提示次数已用完！');
+                return;
+            }
+            hintNum1--;
+            document.getElementById('hintNum1').innerText = hintNum1;
+            if (hintNum1 === 2) {
+                alert('提示1：邮件发送日期是2008-10-31，数字组合为去掉符号后的连续数字');
+            } else if (hintNum1 === 1) {
+                alert('提示2：创世区块核心数字是2009，为4位数字');
+            } else if (hintNum1 === 0) {
+                alert('提示3：密码是日期数字组合（6位）+ 创世区块数字（4位），取前8位');
+            }
+        });
+
+        document.getElementById('submitBtn1').addEventListener('click', function() {
+            const password = document.getElementById('password1').value.trim();
+            // 正确密码：20081031（200810 + 312009 取前8位，贴合线索逻辑）
+            if (password === '20081031') {
+                alert('密码正确！已解锁线索解析页');
+                // 此处可添加跳转逻辑，暂用提示替代
+            } else {
+                document.getElementById('passwordError1').classList.add('show');
+                setTimeout(function() {
+                    document.getElementById('passwordError1').classList.remove('show');
+                }, 2000);
+            }
+        });
+
+        // 线索背包逻辑（模拟）
+        document.getElementById('backpackBtn1').addEventListener('click', function() {
+            alert('线索背包：\n1. 加密邮件原文 - 包含密码线索\n提示：可点击邮件中的高亮部分查看细节');
+        });
+
+        // 关卡1线索高亮交互
+        document.getElementById('clue1-1-highlight').addEventListener('click', function() {
+            alert('高亮提示：邮件日期数字组合为20081031（去掉横线），创世区块核心数字为2009，两者组合取前8位即为密码');
+        });
+    </script>
+</body>
+</html>

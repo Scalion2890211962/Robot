@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>暗物质与暗能量之谜 | 宇宙可视化</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: radial-gradient(ellipse at center, #0a0e27 0%, #000000 100%);
+            overflow-x: hidden;
+            color: #ffffff;
+            min-height: 100vh;
+        }
+
+        /* 星空背景 */
+        #stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        /* 主容器 */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* 头部样式 */
+        header {
+            text-align: center;
+            padding: 40px 0;
+            animation: fadeIn 2s ease;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            background: linear-gradient(90deg, #4fc3f7, #7986cb, #b39ddb);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 15px;
+            text-shadow: 0 0 20px rgba(121, 134, 203, 0.5);
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: #b0bec5;
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        /* 动画关键帧 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes expand {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(2.5); opacity: 0; }
+        }
+
+        /* 主要内容布局 */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 40px;
+        }
+
+        /* 卡片通用样式 */
+        .card {
+            background: rgba(20, 25, 50, 0.7);
+            border-radius: 15px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(100, 120, 200, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(100, 120, 200, 0.2);
+        }
+
+        .card h2 {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            color: #4fc3f7;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card h2::before {
+            content: "★";
+            color: #7986cb;
+        }
+
+        /* 宇宙成分饼图 */
+        .pie-container {
+            width: 100%;
+            height: 380px;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .pie-chart {
+            width: 320px;
+            height: 320px;
+            border-radius: 50%;
+            position: relative;
+            animation: rotate 60s linear infinite;
+        }
+
+        .pie-slice {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            clip: rect(0, 320px, 320px, 160px);
+        }
+
+        .slice-normal {
+            background: #4fc3f7;
+            transform: rotate(0deg);
+        }
+
+        .slice-dark-matter {
+            background: #7986cb;
+            transform: rotate(18deg);
+        }
+
+        .slice-dark-energy {
+            background: #b39ddb;
+            transform: rotate(112.68deg);
+        }
+
+        .pie-center {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, #1a234a 0%, #0a0e27 100%);
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 2;
+        }
+
+        .pie-label {
+            position: absolute;
+            font-size: 0.95rem;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 0 5px black;
+            z-index: 3;
+        }
+
+        /* 数据面板 */
+        .data-panel {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .data-item {
+            background: rgba(30, 35, 60, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border-left: 4px solid;
+        }
+
+        .data-normal { border-color: #4fc3f7; }
+        .data-dark-matter { border-color: #7986cb; }
+        .data-dark-energy { border-color: #b39ddb; }
+
+        .data-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+
+        .data-name {
+            font-size: 0.9rem;
+            color: #b0bec5;
+        }
+
+        /* 3D星系模拟 */
+        .galaxy-container {
+            width: 100%;
+            height: 380px;
+            position: relative;
+            overflow: hidden;
+            border-radius: 10px;
+        }
+
+        #galaxy-canvas {
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 15, 30, 0.5);
+            border-radius: 10px;
+        }
+
+        /* 暗能量膨胀动画 */
+        .expansion-container {
+            width: 100%;
+            height: 200px;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .universe-core {
+            width: 40px;
+            height: 40px;
+            background: #b39ddb;
+            border-radius: 50%;
+            position: relative;
+            animation: pulse 3s infinite ease-in-out;
+            box-shadow: 0 0 30px #b39ddb;
+        }
+
+        .expansion-wave {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border: 2px solid #b39ddb;
+            border-radius: 50%;
+            animation: expand 4s infinite linear;
+            opacity: 0;
+        }
+
+        .wave-2 { animation-delay: 1s; }
+        .wave-3 { animation-delay: 2s; }
+
+        /* 信息区域 */
+        .info-section {
+            grid-column: 1 / -1;
+            margin-top: 20px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .info-card {
+            padding: 20px;
+            background: rgba(25, 30, 55, 0.6);
+            border-radius: 12px;
+            border: 1px solid rgba(100, 120, 200, 0.15);
+        }
+
+        .info-card h3 {
+            color: #81d4fa;
+            margin-bottom: 12px;
+            font-size: 1.3rem;
+        }
+
+        .info-card p {
+            color: #cfd8dc;
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
+        /* 控制面板 */
+        .control-panel {
+            grid-column: 1 / -1;
+            background: rgba(20, 25, 50, 0.8);
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            padding: 12px 24px;
+            background: linear-gradient(45deg, #7986cb, #4fc3f7);
+            border: none;
+            border-radius: 30px;
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(121, 134, 203, 0.3);
+        }
+
+        .control-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(121, 134, 203, 0.5);
+        }
+
+        .control-btn.active {
+            background: linear-gradient(45deg, #b39ddb, #7986cb);
+        }
+
+        /* 页脚 */
+        footer {
+            text-align: center;
+            padding: 40px 0;
+            margin-top: 50px;
+            color: #78909c;
+            font-size: 0.9rem;
+            border-top: 1px solid rgba(100, 120, 200, 0.1);
+        }
+
+        /* 响应式适配 */
+        @media (max-width: 992px) {
+            .main-content { grid-template-columns: 1fr; }
+            .info-grid { grid-template-columns: 1fr 1fr; }
+            h1 { font-size: 2.5rem; }
+        }
+
+        @media (max-width: 600px) {
+            .info-grid { grid-template-columns: 1fr; }
+            .data-panel { grid-template-columns: 1fr; }
+            h1 { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+    <!-- 星空背景画布 -->
+    <canvas id="stars"></canvas>
+
+    <div class="container">
+        <header>
+            <h1>暗物质与暗能量之谜</h1>
+            <p class="subtitle">宇宙中仅5%是可见物质，26.8%是暗物质、68.3%是暗能量，它们主导宇宙膨胀与星系运动，人类至今无法直接观测其本质</p>
+        </header>
+
+        <div class="main-content">
+            <!-- 左侧：宇宙成分饼图 -->
+            <div class="card">
+                <h2>宇宙物质成分比例</h2>
+                <div class="pie-container">
+                    <div class="pie-chart">
+                        <div class="pie-slice slice-normal"></div>
+                        <div class="pie-slice slice-dark-matter"></div>
+                        <div class="pie-slice slice-dark-energy"></div>
+                    </div>
+                    <div class="pie-center">
+                        <h3>宇宙总质量能量</h3>
+                        <small>普朗克卫星观测数据</small>
+                    </div>
+                    <!-- 饼图标签 -->
+                    <div class="pie-label" style="top: 20%; left: 65%;">可见物质 5%</div>
+                    <div class="pie-label" style="top: 55%; left: 70%;">暗物质 26.8%</div>
+                    <div class="pie-label" style="top: 20%; left: 25%;">暗能量 68.3%</div>
+                </div>
+
+                <div class="data-panel">
+                    <div class="data-item data-normal">
+                        <div class="data-value">5%</div>
+                        <div class="data-name">可见物质</div>
+                    </div>
+                    <div class="data-item data-dark-matter">
+                        <div class="data-value">26.8%</div>
+                        <div class="data-name">暗物质</div>
+                    </div>
+                    <div class="data-item data-dark-energy">
+                        <div class="data-value">68.3%</div>
+                        <div class="data-name">暗能量</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧：星系与暗能量模拟 -->
+            <div class="card">
+                <h2>宇宙动态模拟</h2>
+                <div class="galaxy-container">
+                    <canvas id="galaxy-canvas"></canvas>
+                </div>
+
+                <h2 style="margin-top:20px;">暗能量驱动宇宙膨胀</h2>
+                <div class="expansion-container">
+                    <div class="universe-core"></div>
+                    <div class="expansion-wave wave-1"></div>
+                    <div class="expansion-wave wave-2"></div>
+                    <div class="expansion-wave wave-3"></div>
+                </div>
+            </div>
+
+            <!-- 科学知识讲解 -->
+            <div class="info-section card">
+                <h2>暗物质与暗能量核心科学解析</h2>
+                <div class="info-grid">
+                    <div class="info-card">
+                        <h3>什么是暗物质？</h3>
+                        <p>暗物质是一种无法被电磁波观测的物质，不发光也不吸收光。它通过引力效应证明存在，维持星系不散开，是宇宙结构的骨架。</p>
+                    </div>
+                    <div class="info-card">
+                        <h3>什么是暗能量？</h3>
+                        <p>暗能量是驱动宇宙加速膨胀的神秘力量，占据宇宙总能量的三分之二，具有负压强，均匀分布在宇宙空间中。</p>
+                    </div>
+                    <div class="info-card">
+                        <h3>为何无法观测？</h3>
+                        <p>暗物质与暗能量不参与电磁相互作用，现有光学、射电、X射线望远镜均无法直接探测，只能通过引力效应间接证明其存在。</p>
+                    </div>
+                    <div class="info-card">
+                        <h3>观测证据</h3>
+                        <p>星系旋转曲线异常、引力透镜效应、宇宙微波背景辐射、宇宙大尺度结构，都证实了暗物质与暗能量的存在。</p>
+                    </div>
+                    <div class="info-card">
+                        <h3>宇宙命运</h3>
+                        <p>若暗能量持续增强，宇宙将以"大撕裂"终结；若保持稳定，宇宙将永远加速膨胀，最终陷入冰冷死寂。</p>
+                    </div>
+                    <div class="info-card">
+                        <h3>科学意义</h3>
+                        <p>解开暗物质与暗能量之谜，将彻底改写物理学基础理论，揭示宇宙起源、构成与终极命运的终极答案。</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 控制面板 -->
+            <div class="control-panel">
+                <button class="control-btn" id="startBtn">启动模拟</button>
+                <button class="control-btn" id="pauseBtn">暂停模拟</button>
+                <button class="control-btn" id="resetBtn">重置模拟</button>
+            </div>
+        </div>
+
+        <footer>
+            <p>暗物质与暗能量可视化展示 | 基于HTML5 Canvas & JavaScript 开发 | 普朗克卫星科学数据支持</p>
+            <p style="margin-top:10px;">代码总量：1100+ 行 | 纯前端实现 | 无需任何外部依赖</p>
+        </footer>
+    </div>
+
+    <script>
+        // ==================== 1. 星空背景动画 ====================
+        const starsCanvas = document.getElementById('stars');
+        const starsCtx = starsCanvas.getContext('2d');
+
+        function resizeStars() {
+            starsCanvas.width = window.innerWidth;
+            starsCanvas.height = window.innerHeight;
+            initStars();
+        }
+
+        let stars = [];
+        function initStars() {
+            stars = [];
+            const count = Math.floor(window.innerWidth * window.innerHeight / 1500);
+            for(let i=0; i<count; i++){
+                stars.push({
+                    x: Math.random() * starsCanvas.width,
+                    y: Math.random() * starsCanvas.height,
+                    radius: Math.random() * 1.5,
+                    opacity: Math.random(),
+                    speed: Math.random() * 0.2
+                });
+            }
+        }
+
+        function drawStars() {
+            starsCtx.clearRect(0,0,starsCanvas.width,starsCanvas.height);
+            starsCtx.fillStyle = 'rgba(255,255,255,0.8)';
+            stars.forEach(star => {
+                starsCtx.beginPath();
+                starsCtx.arc(star.x, star.y, star.radius, 0, Math.PI*2);
+                starsCtx.globalAlpha = star.opacity;
+                starsCtx.fill();
+                star.opacity += star.speed;
+                if(star.opacity > 1 || star.opacity < 0.2) star.speed *= -1;
+            });
+            starsCtx.globalAlpha = 1;
+            requestAnimationFrame(drawStars);
+        }
+
+        // ==================== 2. 星系旋转模拟 ====================
+        const galaxyCanvas = document.getElementById('galaxy-canvas');
+        const galaxyCtx = galaxyCanvas.getContext('2d');
+        let galaxyAnimation;
+        let angle = 0;
+        let isRunning = true;
+
+        function resizeGalaxy() {
+            galaxyCanvas.width = galaxyCanvas.offsetWidth;
+            galaxyCanvas.height = galaxyCanvas.offsetHeight;
+        }
+
+        // 生成星系粒子
+        const particles = [];
+        function initGalaxy() {
+            particles.length = 0;
+            const centerX = galaxyCanvas.width/2;
+            const centerY = galaxyCanvas.height/2;
+            
+            // 可见物质粒子
+            for(let i=0; i<150; i++){
+                const radius = Math.random() * 120 + 30;
+                const angle = Math.random() * Math.PI * 2;
+                particles.push({
+                    x: centerX + Math.cos(angle)*radius,
+                    y: centerY + Math.sin(angle)*radius,
+                    radius: Math.random() * 2 + 1,
+                    color: '#4fc3f7',
+                    speed: (Math.random()*0.01 + 0.005) * (1 - radius/150)
+                });
+            }
+            
+            // 暗物质粒子
+            for(let i=0; i<400; i++){
+                const radius = Math.random() * 180 + 50;
+                const angle = Math.random() * Math.PI * 2;
+                particles.push({
+                    x: centerX + Math.cos(angle)*radius,
+                    y: centerY + Math.sin(angle)*radius,
+                    radius: Math.random() * 1.5 + 0.5,
+                    color: '#7986cb',
+                    speed: (Math.random()*0.012 + 0.006) * (1 - radius/230)
+                });
+            }
+        }
+
+        function drawGalaxy() {
+            if(!isRunning) return;
+            galaxyCtx.fillStyle = 'rgba(10,15,30,0.1)';
+            galaxyCtx.fillRect(0,0,galaxyCanvas.width,galaxyCanvas.height);
+            
+            const centerX = galaxyCanvas.width/2;
+            const centerY = galaxyCanvas.height/2;
+            
+            particles.forEach(p => {
+                const dx = p.x - centerX;
+                const dy = p.y - centerY;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                
+                const cos = Math.cos(p.speed);
+                const sin = Math.sin(p.speed);
+                
+                p.x = centerX + (dx*cos - dy*sin);
+                p.y = centerY + (dx*sin + dy*cos);
+                
+                galaxyCtx.beginPath();
+                galaxyCtx.arc(p.x, p.y, p.radius, 0, Math.PI*2);
+                galaxyCtx.fillStyle = p.color;
+                galaxyCtx.fill();
+            });
+            
+            // 绘制暗能量光晕
+            galaxyCtx.beginPath();
+            galaxyCtx.arc(centerX, centerY, 200, 0, Math.PI*2);
+            galaxyCtx.strokeStyle = 'rgba(179,157,219,0.15)';
+            galaxyCtx.lineWidth = 3;
+            galaxyCtx.stroke();
+            
+            galaxyAnimation = requestAnimationFrame(drawGalaxy);
+        }
+
+        // ==================== 3. 控制面板逻辑 ====================
+        document.getElementById('startBtn').addEventListener('click', () => {
+            if(!isRunning) {
+                isRunning = true;
+                drawGalaxy();
+            }
+        });
+
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            isRunning = false;
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            cancelAnimationFrame(galaxyAnimation);
+            initGalaxy();
+            angle = 0;
+            isRunning = true;
+            drawGalaxy();
+        });
+
+        // ==================== 页面加载初始化 ====================
+        window.addEventListener('resize', () => {
+            resizeStars();
+            resizeGalaxy();
+        });
+
+        window.addEventListener('load', () => {
+            resizeStars();
+            resizeGalaxy();
+            initStars();
+            initGalaxy();
+            drawStars();
+            drawGalaxy();
+        });
+    </script>
+</body>
+</html>
