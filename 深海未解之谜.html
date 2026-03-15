@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>深渊热泉：未知生命体 | Abyssal Vent: Unknown Lifeforms</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Noto+Sans+SC:wght@300;400;700&display=swap');
+        
+        body {
+            font-family: 'Share Tech Mono', 'Noto Sans SC', monospace;
+            background: #000510;
+            overflow: hidden;
+            color: #00ffcc;
+        }
+        
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: rgba(0, 255, 204, 0.3);
+            animation: scan 4s linear infinite;
+            pointer-events: none;
+            z-index: 50;
+        }
+        
+        @keyframes scan {
+            0% { top: 0; opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { top: 100%; opacity: 0; }
+        }
+        
+        .bubble {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.8), rgba(0,255,204,0.2));
+            animation: rise 8s infinite ease-in;
+            pointer-events: none;
+        }
+        
+        @keyframes rise {
+            0% { transform: translateY(100vh) scale(0); opacity: 0; }
+            10% { opacity: 0.6; }
+            90% { opacity: 0.6; }
+            100% { transform: translateY(-100px) scale(1.5); opacity: 0; }
+        }
+        
+        .organism {
+            transition: all 0.3s ease;
+            cursor: pointer;
+            filter: drop-shadow(0 0 10px currentColor);
+        }
+        
+        .organism:hover {
+            transform: scale(1.1);
+            filter: drop-shadow(0 0 20px currentColor) brightness(1.3);
+        }
+        
+        .thermal-vent {
+            animation: pulse 3s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.05); }
+        }
+        
+        .data-panel {
+            background: rgba(0, 10, 20, 0.9);
+            border: 1px solid #00ffcc;
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.2);
+            backdrop-filter: blur(10px);
+        }
+        
+        .hud-text {
+            text-shadow: 0 0 10px currentColor;
+        }
+        
+        .depth-meter {
+            background: linear-gradient(to bottom, #00ffcc 0%, #0066ff 50%, #ff0066 100%);
+        }
+        
+        .species-card {
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .species-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 255, 204, 0.3);
+        }
+        
+        .unknown-pattern {
+            background-image: 
+                repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,255,204,0.1) 10px, rgba(0,255,204,0.1) 20px),
+                repeating-linear-gradient(-45deg, transparent, transparent 10px, rgba(255,0,102,0.1) 10px, rgba(255,0,102,0.1) 20px);
+        }
+        
+        .chemosynthesis-bar {
+            background: linear-gradient(90deg, #ff6600, #ffcc00, #00ffcc);
+        }
+        
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #000510;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #00ffcc;
+            border-radius: 4px;
+        }
+        
+        .glitch {
+            animation: glitch 1s linear infinite;
+        }
+        
+        @keyframes glitch {
+            2%, 64% { transform: translate(2px,0) skew(0deg); }
+            4%, 60% { transform: translate(-2px,0) skew(0deg); }
+            62% { transform: translate(0,0) skew(5deg); }
+        }
+        
+        .sonar-ring {
+            border: 2px solid rgba(0, 255, 204, 0.5);
+            border-radius: 50%;
+            animation: sonar 2s ease-out infinite;
+        }
+        
+        @keyframes sonar {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(3); opacity: 0; }
+        }
+    </style>
+</head>
+<body class="h-screen w-screen relative">
+
+    <!-- 背景层 -->
+    <div id="deep-ocean-bg" class="absolute inset-0 bg-gradient-to-b from-slate-900 via-blue-950 to-black z-0"></div>
+    
+    <!-- 粒子效果层 -->
+    <canvas id="particle-canvas" class="absolute inset-0 z-10 pointer-events-none"></canvas>
+    
+    <!-- 扫描线 -->
+    <div class="scan-line"></div>
+    
+    <!-- 气泡容器 -->
+    <div id="bubbles-container" class="absolute inset-0 z-20 pointer-events-none overflow-hidden"></div>
+    
+    <!-- 游戏主界面 -->
+    <div id="game-container" class="relative z-30 h-full w-full flex flex-col">
+        
+        <!-- HUD 顶部 -->
+        <header class="flex justify-between items-center p-4 bg-black/50 border-b border-cyan-500/30">
+            <div class="flex items-center gap-4">
+                <div class="text-2xl font-bold tracking-widest text-cyan-400 hud-text">
+                    ABYSSAL VENT
+                </div>
+                <div class="text-xs text-cyan-600">DEPTH: <span id="depth-display">2800</span>m</div>
+            </div>
+            
+            <div class="flex gap-6 text-sm">
+                <div class="flex flex-col items-center">
+                    <span class="text-xs text-gray-400">ENERGY</span>
+                    <div class="w-32 h-2 bg-gray-800 rounded-full overflow-hidden">
+                        <div id="energy-bar" class="h-full bg-gradient-to-r from-yellow-400 to-orange-500 w-3/4 transition-all duration-500"></div>
+                    </div>
+                </div>
+                <div class="flex flex-col items-center">
+                    <span class="text-xs text-gray-400">OXYGEN</span>
+                    <div class="w-32 h-2 bg-gray-800 rounded-full overflow-hidden">
+                        <div id="oxygen-bar" class="h-full bg-gradient-to-r from-cyan-400 to-blue-500 w-full transition-all duration-500"></div>
+                    </div>
+                </div>
+                <div class="flex flex-col items-center">
+                    <span class="text-xs text-gray-400">SAMPLES</span>
+                    <span id="sample-count" class="text-cyan-400 font-bold">0/50</span>
+                </div>
+            </div>
+            
+            <div class="flex gap-2">
+                <button onclick="game.toggleSonar()" class="px-3 py-1 border border-cyan-500/50 hover:bg-cyan-500/20 text-xs transition-colors">
+                    SONAR [S]
+                </button>
+                <button onclick="game.toggleLights()" class="px-3 py-1 border border-cyan-500/50 hover:bg-cyan-500/20 text-xs transition-colors">
+                    LIGHTS [L]
+                </button>
+                <button onclick="game.pause()" class="px-3 py-1 border border-cyan-500/50 hover:bg-cyan-500/20 text-xs transition-colors">
+                    PAUSE [P]
+                </button>
+            </div>
+        </header>
+
+        <!-- 主游戏区域 -->
+        <main class="flex-1 flex overflow-hidden">
+            
+            <!-- 左侧控制面板 -->
+            <aside class="w-80 bg-black/60 border-r border-cyan-500/30 p-4 flex flex-col gap-4 overflow-y-auto">
+                
+                <!-- 生态系统状态 -->
+                <div class="data-panel p-4 rounded-lg">
+                    <h3 class="text-cyan-400 font-bold mb-3 border-b border-cyan-500/30 pb-2">生态系统状态</h3>
+                    
+                    <div class="space-y-3 text-xs">
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-gray-400">硫化氢浓度</span>
+                                <span id="h2s-level" class="text-yellow-400">High</span>
+                            </div>
+                            <div class="h-1 bg-gray-800 rounded-full overflow-hidden">
+                                <div class="h-full bg-yellow-500 w-4/5 animate-pulse"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-gray-400">水温</span>
+                                <span id="temp-display" class="text-red-400">350°C</span>
+                            </div>
+                            <div class="h-1 bg-gray-800 rounded-full overflow-hidden">
+                                <div class="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-red-500 w-3/4"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-gray-400">pH值</span>
+                                <span class="text-green-400">2.8</span>
+                            </div>
+                            <div class="h-1 bg-gray-800 rounded-full overflow-hidden">
+                                <div class="h-full bg-green-500 w-1/4"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-gray-400">化能合成效率</span>
+                                <span id="chemo-efficiency" class="text-cyan-400">85%</span>
+                            </div>
+                            <div class="h-2 bg-gray-800 rounded-full overflow-hidden">
+                                <div id="chemo-bar" class="h-full chemosynthesis-bar w-4/5 transition-all duration-1000"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 物种发现进度 -->
+                <div class="data-panel p-4 rounded-lg">
+                    <h3 class="text-cyan-400 font-bold mb-3 border-b border-cyan-500/30 pb-2">物种发现</h3>
+                    <div class="grid grid-cols-5 gap-2" id="species-grid">
+                        <!-- 动态生成 -->
+                    </div>
+                    <div class="mt-3 text-xs text-gray-400">
+                        已发现: <span id="discovered-count" class="text-cyan-400">0</span> / 
+                        <span id="total-species" class="text-cyan-400">50</span>
+                    </div>
+                </div>
+
+                <!-- 任务日志 -->
+                <div class="data-panel p-4 rounded-lg flex-1">
+                    <h3 class="text-cyan-400 font-bold mb-3 border-b border-cyan-500/30 pb-2">任务日志</h3>
+                    <div id="mission-log" class="space-y-2 text-xs max-h-48 overflow-y-auto">
+                        <div class="text-green-400">> 系统初始化完成</div>
+                        <div class="text-cyan-400">> 到达热泉区域: 龙宫口</div>
+                        <div class="text-yellow-400">> 检测到未知生物信号...</div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- 中央视窗 -->
+            <div class="flex-1 relative bg-black/40 overflow-hidden" id="viewport">
+                
+                <!-- 深度指示器 -->
+                <div class="absolute left-4 top-1/2 -translate-y-1/2 w-2 h-64 bg-gray-800 rounded-full overflow-hidden z-40">
+                    <div class="depth-meter w-full h-full opacity-50"></div>
+                    <div id="depth-marker" class="absolute w-full h-1 bg-white shadow-[0_0_10px_white] transition-all duration-1000" style="top: 20%"></div>
+                </div>
+
+                <!-- 热泉区域 -->
+                <div id="vent-zone" class="absolute inset-0 flex items-center justify-center">
+                    <!-- 热泉喷口 -->
+                    <div class="thermal-vent absolute w-32 h-32 bg-gradient-to-t from-orange-600/80 via-yellow-500/40 to-transparent rounded-full blur-xl"></div>
+                    <div class="thermal-vent absolute w-48 h-48 bg-gradient-to-t from-red-600/40 via-orange-400/20 to-transparent rounded-full blur-2xl animate-pulse"></div>
+                    
+                    <!-- 生物容器 -->
+                    <div id="organisms-container" class="absolute inset-0"></div>
+                    
+                    <!-- 玩家探测器 -->
+                    <div id="probe" class="absolute w-8 h-8 transition-all duration-300 z-50" style="left: 50%; top: 50%;">
+                        <div class="absolute inset-0 bg-cyan-400 rounded-full animate-ping opacity-20"></div>
+                        <div class="absolute inset-1 bg-cyan-500 rounded-full shadow-[0_0_20px_cyan]"></div>
+                        <div id="probe-light" class="absolute -inset-8 bg-gradient-to-r from-cyan-400/20 to-transparent rounded-full opacity-0 transition-opacity duration-300"></div>
+                    </div>
+                </div>
+
+                <!-- 扫描覆盖层 -->
+                <div id="scan-overlay" class="absolute inset-0 pointer-events-none opacity-0 transition-opacity duration-500">
+                    <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,255,204,0.1)_100%)]"></div>
+                    <div class="sonar-ring absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20"></div>
+                </div>
+
+                <!-- 发现提示 -->
+                <div id="discovery-popup" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 data-panel p-6 rounded-lg hidden z-50 max-w-md">
+                    <div class="text-center">
+                        <div class="text-4xl mb-2">🔬</div>
+                        <h2 class="text-xl font-bold text-cyan-400 mb-2">新物种发现!</h2>
+                        <div id="discovery-content" class="text-sm text-gray-300 mb-4"></div>
+                        <button onclick="game.closeDiscovery()" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded text-white text-sm transition-colors">
+                            记录数据 [ENTER]
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧信息面板 -->
+            <aside class="w-96 bg-black/60 border-l border-cyan-500/30 p-4 flex flex-col gap-4 overflow-y-auto">
+                
+                <!-- 当前目标详情 -->
+                <div class="data-panel p-4 rounded-lg">
+                    <h3 class="text-cyan-400 font-bold mb-3 border-b border-cyan-500/30 pb-2">目标分析</h3>
+                    <div id="target-info" class="space-y-3">
+                        <div class="text-center text-gray-500 py-8">
+                            <div class="text-4xl mb-2">👁️</div>
+                            <p class="text-sm">将探测器对准生物以分析</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 生态系统食物网 -->
+                <div class="data-panel p-4 rounded-lg flex-1">
+                    <h3 class="text-cyan-400 font-bold mb-3 border-b border-cyan-500/30 pb-2">热泉食物网</h3>
+                    <div class="relative h-64 w-full" id="food-web">
+                        <canvas id="food-web-canvas" class="w-full h-full"></canvas>
+                    </div>
+                    <div class="mt-3 text-xs text-gray-400 space-y-1">
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                            <span>化能合成细菌 (生产者)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 bg-orange-500 rounded-full"></div>
+                            <span>滤食性动物 (初级消费者)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+                            <span>捕食者 (次级/三级消费者)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 研究笔记 -->
+                <div class="data-panel p-4 rounded-lg">
+                    <h3 class="text-cyan-400 font-bold mb-3 border-b border-cyan-500/30 pb-2">研究笔记</h3>
+                    <textarea id="research-notes" class="w-full h-24 bg-black/50 border border-cyan-500/30 rounded p-2 text-xs text-cyan-100 resize-none focus:outline-none focus:border-cyan-400" placeholder="记录你的观察..."></textarea>
+                </div>
+            </aside>
+        </main>
+
+        <!-- 底部状态栏 -->
+        <footer class="bg-black/80 border-t border-cyan-500/30 p-2 text-xs flex justify-between items-center">
+            <div class="flex gap-4 text-gray-400">
+                <span>POS: <span id="coords" class="text-cyan-400">0, 0</span></span>
+                <span>TIME: <span id="mission-time" class="text-cyan-400">00:00</span></span>
+                <span>PRESSURE: <span class="text-cyan-400">280 atm</span></span>
+            </div>
+            <div class="flex gap-2">
+                <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                <span class="text-green-400">LIFE SUPPORT: ONLINE</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- 开始界面 -->
+    <div id="start-screen" class="absolute inset-0 z-50 bg-black flex items-center justify-center">
+        <div class="max-w-2xl w-full p-8 text-center">
+            <h1 class="text-6xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 hud-text">
+                ABYSSAL VENT
+            </h1>
+            <h2 class="text-2xl text-cyan-600 mb-8 tracking-widest">深渊热泉：未知生命体</h2>
+            
+            <div class="text-left bg-black/50 border border-cyan-500/30 p-6 rounded-lg mb-8 space-y-4 text-sm text-gray-300">
+                <p class="text-cyan-400 font-bold">任务简报：</p>
+                <p>你是一名深海生物学家，驾驶着先进的探测器"深渊号"潜入太平洋海底2800米处的热泉生态系统。</p>
+                <p>这里是一个不依赖阳光的生命绿洲。化能合成细菌利用热泉喷出的硫化氢制造有机物，支撑着一个完整的黑暗食物网。</p>
+                <p class="text-yellow-400">目标：发现并记录50种未知物种，解开热泉生态系统的维持机制。</p>
+                <div class="grid grid-cols-2 gap-4 mt-4 text-xs">
+                    <div class="border border-cyan-500/20 p-3 rounded">
+                        <strong class="text-cyan-400">[WASD]</strong> 移动探测器
+                    </div>
+                    <div class="border border-cyan-500/20 p-3 rounded">
+                        <strong class="text-cyan-400">[SPACE]</strong> 采集样本
+                    </div>
+                    <div class="border border-cyan-500/20 p-3 rounded">
+                        <strong class="text-cyan-400">[S]</strong> 声纳扫描
+                    </div>
+                    <div class="border border-cyan-500/20 p-3 rounded">
+                        <strong class="text-cyan-400">[L]</strong> 探照灯
+                    </div>
+                </div>
+            </div>
+            
+            <button onclick="game.start()" class="px-8 py-4 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-lg text-lg transition-all transform hover:scale-105 shadow-[0_0_30px_rgba(0,255,204,0.5)]">
+                开始下潜 [ENTER]
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 游戏核心系统 ====================
+        
+        class DeepSeaEcosystem {
+            constructor() {
+                this.species = [];
+                this.discoveredSpecies = new Set();
+                this.ventLocations = [];
+                this.energyFlow = 0;
+                this.temperature = 350;
+                this.ph = 2.8;
+                this.h2sConcentration = 0.8;
+                this.organisms = [];
+                this.particles = [];
+                this.foodWeb = new Map();
+                this.evolutionTimer = 0;
+                this.initializeSpecies();
+                this.initializeFoodWeb();
+            }
+
+            initializeSpecies() {
+                // 基于真实深海热泉生物群落的50种虚构/真实混合物种
+                const speciesData = [
+                    // 生产者 (化能合成细菌)
+                    { id: 1, name: "嗜热硫杆菌 α型", type: "bacteria", tier: 1, size: 0.5, color: "#ffff00", desc: "最基础的化能合成细菌，将硫化氢转化为有机物", real: true },
+                    { id: 2, name: "深海热球菌", type: "bacteria", tier: 1, size: 0.8, color: "#ffcc00", desc: "耐高温古菌，构成白色菌毯的主要成分", real: true },
+                    { id: 3, name: "硫氧化杆菌群", type: "bacteria", tier: 1, size: 1.2, color: "#ff9900", desc: "形成厚厚的橙色菌席，覆盖在热泉喷口周围", real: true },
+                    { id: 4, name: "甲烷嗜热菌", type: "bacteria", tier: 1, size: 0.6, color: "#ccff00", desc: "利用甲烷进行化能合成，分布在低温扩散区", real: true },
+                    { id: 5, name: "铁氧化古菌", type: "bacteria", tier: 1, size: 0.7, color: "#ff6600", desc: "氧化亚铁离子获取能量，形成锈色沉积物", real: true },
+                    
+                    // 初级消费者 (滤食性/ grazing)
+                    { id: 6, name: "巨型管虫 Riftia", type: "worm", tier: 2, size: 15, color: "#ff0066", desc: "没有嘴和消化系统，完全依赖体内共生细菌", real: true },
+                    { id: 7, name: " Pompeii 蠕虫", type: "worm", tier: 2, size: 8, color: "#ff6699", desc: "背部覆盖白色菌毛，能承受60°C温差", real: true },
+                    { id: 8, name: "盲眼阿尔文虾", type: "crustacean", tier: 2, size: 5, color: "#ff99cc", desc: "背部有感光器官，能在热液中导航", real: true },
+                    { id: 9, name: "热泉帽贝", type: "mollusk", tier: 2, size: 3, color: "#cc6699", desc: "用齿舌刮食岩石上的细菌膜", real: true },
+                    { id: 10, name: "巨型白蛤", type: "mollusk", tier: 2, size: 12, color: "#ffcccc", desc: "体内有共生细菌，外壳长达30厘米", real: true },
+                    { id: 11, name: "深海贻贝 Bathymodiolus", type: "mollusk", tier: 2, size: 10, color: "#9966ff", desc: "利用甲烷氧化菌作为共生体", real: true },
+                    { id: 12, name: "鳞足蜗牛", type: "mollusk", tier: 2, size: 4, color: "#cc99ff", desc: "唯一已知将铁硫化物融入壳体的生物", real: true },
+                    { id: 13, name: "热泉藤壶", type: "crustacean", tier: 2, size: 2, color: "#ffccff", desc: "滤食热液中的细菌团块", real: true },
+                    { id: 14, name: "多毛类环节动物", type: "worm", tier: 2, size: 6, color: "#ff66cc", desc: "在菌毯中筑巢，以细菌为食", real: true },
+                    { id: 15, name: "深海线虫", type: "worm", tier: 2, size: 0.2, color: "#ff99ff", desc: "数量庞大，构成微生物食物网的基础", real: true },
+                    
+                    // 次级消费者 (捕食者/杂食)
+                    { id: 16, name: "热泉章鱼 Grimpoteuthis", type: "cephalopod", tier: 3, size: 18, color: "#ff3333", desc: "以贝类和蟹类为食，能耐受低氧环境", real: true },
+                    { id: 17, name: "深海蟹 Bythograea", type: "crustacean", tier: 3, size: 8, color: "#ff6666", desc: "捕食小型无脊椎动物和细菌团", real: true },
+                    { id: 18, name: "热泉鱼 Zoarcidae", type: "fish", tier: 3, size: 20, color: "#ff9999", desc: "底栖鱼类，捕食蠕虫和甲壳类", real: true },
+                    { id: 19, name: "深海海参", type: "echinoderm", tier: 3, size: 25, color: "#ffcc99", desc: "以沉积物中的有机碎屑为食", real: true },
+                    { id: 20, name: "海百合", type: "echinoderm", tier: 3, size: 15, color: "#ff9966", desc: "滤食性，捕捉随热液漂浮的有机颗粒", real: true },
+                    { id: 21, name: "深海海星", type: "echinoderm", tier: 3, size: 12, color: "#ff6633", desc: "捕食贻贝，能打开贝壳", real: true },
+                    { id: 22, name: "海胆", type: "echinoderm", tier: 3, size: 8, color: "#ff3300", desc: "啃食岩石表面的藻类和细菌", real: true },
+                    { id: 23, name: "片脚类动物", type: "crustacean", tier: 3, size: 3, color: "#ff6699", desc: "机会主义捕食者，清理有机碎屑", real: true },
+                    { id: 24, name: "等足类巨虫", type: "crustacean", tier: 3, size: 35, color: "#cc3333", desc: "深海清道夫，体长可达40厘米", real: true },
+                    { id: 25, name: "端足类群", type: "crustacean", tier: 3, size: 2, color: "#ff3366", desc: "群体捕食，攻击受伤的生物", real: true },
+                    
+                    // 顶级捕食者
+                    { id: 26, name: "深海狼鱼", type: "fish", tier: 4, size: 60, color: "#cc0000", desc: "顶级捕食者，拥有巨大的咬合力", real: false },
+                    { id: 27, name: "热泉龙蟹", type: "crustacean", tier: 4, size: 45, color: "#990000", desc: "蟹壳上生长着发光细菌，用以诱捕猎物", real: false },
+                    { id: 28, name: "深渊鮟鱇", type: "fish", tier: 4, size: 30, color: "#660000", desc: "头顶发光器发出模拟热液的光，吸引猎物", real: false },
+                    { id: 29, name: "巨型海蜘蛛", type: "arthropod", tier: 4, size: 40, color: "#ff0000", desc: "腿展可达1米，吸食其他无脊椎动物的体液", real: true },
+                    { id: 30, name: "深海章鱼巨兽", type: "cephalopod", tier: 4, size: 80, color: "#990033", desc: "智能捕食者，能打开硬壳猎物", real: false },
+                    
+                    // 特殊/神秘物种 (未知领域)
+                    { id: 31, name: "热泉幽灵水母", type: "cnidarian", tier: 3, size: 50, color: "#00ffff", desc: "半透明的巨大水母，体内有发光共生菌", real: false },
+                    { id: 32, name: "硫细菌共生海葵", type: "cnidarian", tier: 2, size: 20, color: "#00ffcc", desc: "触手内有化能合成细菌，无需阳光", real: false },
+                    { id: 33, name: "深渊发光蠕虫", type: "worm", tier: 2, size: 10, color: "#00ff99", desc: "发出生物荧光，可能用于吸引猎物或配偶", real: false },
+                    { id: 34, name: "热泉玻璃海绵", type: "porifera", tier: 2, size: 30, color: "#ccffff", desc: "硅质骨架，为许多小型生物提供庇护", real: true },
+                    { id: 35, name: "金属沉积菌落", type: "bacteria", tier: 1, size: 5, color: "#cccccc", desc: "在喷口形成金属质感的柱状结构", real: false },
+                    { id: 36, name: "磁性趋化细菌", type: "bacteria", tier: 1, size: 1, color: "#999999", desc: "沿地球磁场线排列，指向热液源头", real: true },
+                    { id: 37, name: "热泉珊瑚", type: "cnidarian", tier: 2, size: 25, color: "#ff99cc", desc: "不依赖虫黄藻，依靠滤食和共生细菌", real: false },
+                    { id: 38, name: "深海盲鳗", type: "fish", tier: 3, size: 40, color: "#ff6699", desc: "寄生性，钻入大型动物体内进食", real: true },
+                    { id: 39, name: "热泉蜘蛛蟹", type: "crustacean", tier: 3, size: 20, color: "#ff3399", desc: "在喷口周围织网，捕捉随流而来的食物", real: false },
+                    { id: 40, name: "化能合成扁形虫", type: "worm", tier: 2, size: 3, color: "#ff99ff", desc: "体内有光合细菌，但利用化学能", real: false },
+                    
+                    // 极端环境特化种
+                    { id: 41, name: "超嗜热古菌 X", type: "bacteria", tier: 1, size: 0.3, color: "#ffffff", desc: "能在121°C下存活，接近生命极限", real: true },
+                    { id: 42, name: "耐酸原生动物", type: "protist", tier: 2, size: 0.1, color: "#ffffcc", desc: "在pH<1的环境中捕食细菌", real: false },
+                    { id: 43, name: "高压适应菌", type: "bacteria", tier: 1, size: 0.4, color: "#ccffff", desc: "依赖极端压力维持细胞膜结构", real: true },
+                    { id: 44, name: "厌氧纤毛虫", type: "protist", tier: 2, size: 0.2, color: "#ccffcc", desc: "完全厌氧，氧气对它们是有毒的", real: true },
+                    { id: 45, name: "硫还原菌", type: "bacteria", tier: 1, size: 0.6, color: "#ffff99", desc: "将硫酸盐还原为硫化物，完成硫循环", real: true },
+                    
+                    // 共生系统
+                    { id: 46, name: "管虫共生菌", type: "symbiont", tier: 1, size: 0.01, color: "#ffcccc", desc: "生活在管虫营养体内，为其提供营养", real: true },
+                    { id: 47, name: "贻贝共生甲烷菌", type: "symbiont", tier: 1, size: 0.01, color: "#ccffcc", desc: "在贻贝鳃中氧化甲烷", real: true },
+                    { id: 48, name: "蜗牛共生铁菌", type: "symbiont", tier: 1, size: 0.01, color: "#ccccff", desc: "产生铁硫化物，强化蜗牛壳", real: true },
+                    { id: 49, name: "热泉病毒群落", type: "virus", tier: 0, size: 0.001, color: "#ff00ff", desc: "控制细菌种群，促进基因水平转移", real: true },
+                    { id: 50, name: "未知生命体 X-1", type: "unknown", tier: 5, size: 100, color: "#ffffff", desc: "信号显示存在某种巨大生物，但从未被直接观测...", real: false }
+                ];
+                
+                this.species = speciesData.map(s => ({
+                    ...s,
+                    discovered: false,
+                    population: Math.floor(Math.random() * 100) + 10,
+                    x: Math.random() * 800 - 400,
+                    y: Math.random() * 600 - 300,
+                    behavior: this.generateBehavior(s.type),
+                    energy: 100,
+                    age: 0
+                }));
+            }
+
+            initializeFoodWeb() {
+                // 建立食物网关系
+                this.foodWeb.set(1, [6, 7, 8, 9, 10, 11]); // 细菌被多种动物食用
+                this.foodWeb.set(2, [6, 7]);
+                this.foodWeb.set(3, [9, 12]);
+                this.foodWeb.set(4, [11]);
+                this.foodWeb.set(5, [12]);
+                this.foodWeb.set(6, [16, 17, 18]); // 管虫被高级捕食者吃
+                this.foodWeb.set(7, [17, 18]);
+                this.foodWeb.set(8, [16, 19]);
+                this.foodWeb.set(9, [17, 21]);
+                this.foodWeb.set(10, [16, 21, 22]);
+                this.foodWeb.set(11, [16, 18, 21]);
+                this.foodWeb.set(12, [17, 22]);
+                this.foodWeb.set(13, [17]);
+                this.foodWeb.set(14, [18]);
+                this.foodWeb.set(15, [23, 24]);
+                this.foodWeb.set(16, [26, 27, 30]);
+                this.foodWeb.set(17, [26, 27]);
+                this.foodWeb.set(18, [26, 28]);
+                this.foodWeb.set(19, [28]);
+                this.foodWeb.set(20, [28]);
+                this.foodWeb.set(21, [27]);
+                this.foodWeb.set(22, [24]);
+                this.foodWeb.set(23, [25]);
+                this.foodWeb.set(24, [26, 29]);
+                this.foodWeb.set(25, [26]);
+            }
+
+            generateBehavior(type) {
+                const behaviors = {
+                    bacteria: { movement: 'static', reproduction: 'rapid', aggregation: 'colony' },
+                    worm: { movement: 'sessile', reproduction: 'asexual', aggregation: 'cluster' },
+                    crustacean: { movement: 'crawling', reproduction: 'sexual', aggregation: 'scattered' },
+                    mollusk: { movement: 'slow', reproduction: 'spawning', aggregation: 'bed' },
+                    fish: { movement: 'swimming', reproduction: 'spawning', aggregation: 'school' },
+                    cephalopod: { movement: 'jet', reproduction: 'sexual', aggregation: 'solitary' },
+                    echinoderm: { movement: 'crawling', reproduction: 'asexual', aggregation: 'scattered' },
+                    cnidarian: { movement: 'drifting', reproduction: 'asexual', aggregation: 'colony' },
+                    unknown: { movement: 'mysterious', reproduction: 'unknown', aggregation: 'unique' }
+                };
+                return behaviors[type] || behaviors.bacteria;
+            }
+
+            update(deltaTime) {
+                this.evolutionTimer += deltaTime;
+                
+                // 模拟生态系统动态
+                this.species.forEach(s => {
+                    if (!s.discovered) {
+                        // 未发现的物种会移动和变化
+                        s.x += (Math.random() - 0.5) * 0.5;
+                        s.y += (Math.random() - 0.5) * 0.5;
+                        s.age += deltaTime;
+                        
+                        // 种群波动
+                        if (Math.random() < 0.01) {
+                            s.population += Math.floor((Math.random() - 0.5) * 10);
+                            s.population = Math.max(5, Math.min(200, s.population));
+                        }
+                    }
+                });
+
+                // 环境参数波动
+                this.temperature = 350 + Math.sin(this.evolutionTimer * 0.001) * 50;
+                this.h2sConcentration = 0.8 + Math.cos(this.evolutionTimer * 0.0005) * 0.2;
+            }
+
+            getNearbySpecies(x, y, radius = 100) {
+                return this.species.filter(s => {
+                    const dx = s.x - x;
+                    const dy = s.y - y;
+                    return Math.sqrt(dx*dx + dy*dy) < radius && !s.discovered;
+                });
+            }
+
+            discoverSpecies(id) {
+                const species = this.species.find(s => s.id === id);
+                if (species && !species.discovered) {
+                    species.discovered = true;
+                    this.discoveredSpecies.add(id);
+                    return species;
+                }
+                return null;
+            }
+
+            getEcosystemHealth() {
+                const discovered = this.discoveredSpecies.size;
+                const total = this.species.length;
+                return {
+                    biodiversity: discovered / total,
+                    stability: this.calculateStability(),
+                    productivity: this.calculateProductivity()
+                };
+            }
+
+            calculateStability() {
+                // 基于食物网完整度计算稳定性
+                const keySpecies = [1, 6, 16, 26]; // 关键种
+                const discoveredKey = keySpecies.filter(id => this.discoveredSpecies.has(id)).length;
+                return discoveredKey / keySpecies.length;
+            }
+
+            calculateProductivity() {
+                // 基于初级生产者数量
+                const producers = this.species.filter(s => s.tier === 1);
+                const totalPop = producers.reduce((sum, s) => sum + s.population, 0);
+                return Math.min(1, totalPop / 1000);
+            }
+        }
+
+        // ==================== 游戏主类 ====================
+
+        class Game {
+            constructor() {
+                this.ecosystem = new DeepSeaEcosystem();
+                this.canvas = document.getElementById('particle-canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.probe = { x: 0, y: 0, targetX: 0, targetY: 0 };
+                this.keys = {};
+                this.gameLoop = null;
+                this.lastTime = 0;
+                this.energy = 100;
+                this.oxygen = 100;
+                this.samples = 0;
+                this.missionTime = 0;
+                this.lightsOn = false;
+                this.sonarActive = false;
+                this.paused = false;
+                this.audioContext = null;
+                this.synth = null;
+                this.discoveryQueue = [];
+                this.showingDiscovery = false;
+                
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+                this.setupControls();
+                this.generateBubbles();
+                this.updateSpeciesGrid();
+            }
+
+            resize() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+            }
+
+            setupControls() {
+                window.addEventListener('keydown', (e) => {
+                    this.keys[e.key.toLowerCase()] = true;
+                    
+                    if (e.key === ' ') this.collectSample();
+                    if (e.key.toLowerCase() === 's') this.toggleSonar();
+                    if (e.key.toLowerCase() === 'l') this.toggleLights();
+                    if (e.key.toLowerCase() === 'p') this.pause();
+                    if (e.key === 'Enter') {
+                        if (document.getElementById('start-screen').style.display !== 'none') {
+                            this.start();
+                        } else if (this.showingDiscovery) {
+                            this.closeDiscovery();
+                        }
+                    }
+                });
+                
+                window.addEventListener('keyup', (e) => {
+                    this.keys[e.key.toLowerCase()] = false;
+                });
+
+                // 鼠标控制
+                const viewport = document.getElementById('viewport');
+                viewport.addEventListener('mousemove', (e) => {
+                    const rect = viewport.getBoundingClientRect();
+                    this.probe.targetX = e.clientX - rect.left - rect.width/2;
+                    this.probe.targetY = e.clientY - rect.top - rect.height/2;
+                });
+
+                viewport.addEventListener('click', (e) => {
+                    this.checkOrganismClick(e);
+                });
+            }
+
+            async start() {
+                document.getElementById('start-screen').style.display = 'none';
+                await this.initAudio();
+                this.gameLoop = requestAnimationFrame((t) => this.update(t));
+                this.addLog("探测器已部署，开始扫描...", "success");
+                this.spawnInitialOrganisms();
+            }
+
+            async initAudio() {
+                await Tone.start();
+                this.synth = new Tone.PolySynth(Tone.Synth).toDestination();
+                this.synth.volume.value = -10;
+                
+                // 深海环境音
+                const noise = new Tone.Noise("brown").toDestination();
+                noise.volume.value = -20;
+                const filter = new Tone.AutoFilter({
+                    frequency: 0.1,
+                    baseFrequency: 200,
+                    octaves: 2.6
+                }).toDestination().start();
+                noise.connect(filter);
+                noise.start();
+            }
+
+            spawnInitialOrganisms() {
+                const container = document.getElementById('organisms-container');
+                container.innerHTML = '';
+                
+                this.ecosystem.species.forEach((s, index) => {
+                    if (index < 10) { // 初始只生成部分
+                        this.createOrganismElement(s);
+                    }
+                });
+            }
+
+            createOrganismElement(species) {
+                const el = document.createElement('div');
+                el.className = 'organism absolute';
+                el.style.width = `${species.size * 2}px`;
+                el.style.height = `${species.size * 2}px`;
+                el.style.backgroundColor = species.color;
+                el.style.borderRadius = '50%';
+                el.style.left = `calc(50% + ${species.x}px)`;
+                el.style.top = `calc(50% + ${species.y}px)`;
+                el.style.boxShadow = `0 0 ${species.size}px ${species.color}`;
+                el.dataset.id = species.id;
+                
+                // 根据类型设置形状
+                if (species.type === 'worm') {
+                    el.style.borderRadius = '50% 20% 50% 20%';
+                    el.style.transform = 'rotate(45deg)';
+                } else if (species.type === 'crustacean') {
+                    el.style.borderRadius = '30%';
+                } else if (species.type === 'fish') {
+                    el.style.clipPath = 'polygon(0% 50%, 100% 0%, 100% 100%)';
+                }
+                
+                el.addEventListener('mouseenter', () => this.showTargetInfo(species));
+                el.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.attemptDiscovery(species);
+                });
+                
+                document.getElementById('organisms-container').appendChild(el);
+                return el;
+            }
+
+            update(time) {
+                if (this.paused) {
+                    this.gameLoop = requestAnimationFrame((t) => this.update(t));
+                    return;
+                }
+
+                const deltaTime = time - this.lastTime;
+                this.lastTime = time;
+
+                // 更新探测器位置
+                this.probe.x += (this.probe.targetX - this.probe.x) * 0.1;
+                this.probe.y += (this.probe.targetY - this.probe.y) * 0.1;
+                
+                const probeEl = document.getElementById('probe');
+                probeEl.style.left = `calc(50% + ${this.probe.x}px)`;
+                probeEl.style.top = `calc(50% + ${this.probe.y}px)`;
+
+                // 移动控制
+                const speed = 2;
+                if (this.keys['w']) this.probe.targetY -= speed;
+                if (this.keys['s']) this.probe.targetY += speed;
+                if (this.keys['a']) this.probe.targetX -= speed;
+                if (this.keys['d']) this.probe.targetX += speed;
+
+                // 限制范围
+                this.probe.targetX = Math.max(-400, Math.min(400, this.probe.targetX));
+                this.probe.targetY = Math.max(-300, Math.min(300, this.probe.targetY));
+
+                // 更新坐标显示
+                document.getElementById('coords').textContent = 
+                    `${Math.floor(this.probe.x)}, ${Math.floor(this.probe.y)}`;
+
+                // 消耗资源
+                this.oxygen -= 0.01;
+                this.energy -= 0.005;
+                this.missionTime += deltaTime;
+
+                // 更新UI
+                this.updateHUD();
+                this.drawParticles();
+                this.ecosystem.update(deltaTime);
+
+                // 随机生成新生物
+                if (Math.random() < 0.001) {
+                    this.spawnNewOrganism();
+                }
+
+                // 检查发现
+                this.checkDiscoveries();
+
+                this.gameLoop = requestAnimationFrame((t) => this.update(t));
+            }
+
+            spawnNewOrganism() {
+                const undiscovered = this.ecosystem.species.filter(s => !s.discovered);
+                if (undiscovered.length > 0 && Math.random() < 0.3) {
+                    const s = undiscovered[Math.floor(Math.random() * undiscovered.length)];
+                    if (!document.querySelector(`[data-id="${s.id}"]`)) {
+                        this.createOrganismElement(s);
+                        this.addLog(`检测到新的生物信号: ${s.name}`, "info");
+                    }
+                }
+            }
+
+            checkDiscoveries() {
+                const nearby = this.ecosystem.getNearbySpecies(this.probe.x, this.probe.y, 50);
+                nearby.forEach(s => {
+                    if (this.sonarActive && Math.random() < 0.02) {
+                        this.attemptDiscovery(s);
+                    }
+                });
+            }
+
+            attemptDiscovery(species) {
+                if (species.discovered) return;
+                
+                // 播放发现音效
+                if (this.synth) {
+                    this.synth.triggerAttackRelease(["C5", "E5", "G5"], "8n");
+                }
+
+                const discovered = this.ecosystem.discoverSpecies(species.id);
+                if (discovered) {
+                    this.showDiscovery(discovered);
+                    this.samples++;
+                    this.updateSpeciesGrid();
+                    this.addLog(`发现新物种: ${discovered.name}`, "success");
+                    
+                    // 检查胜利条件
+                    if (this.ecosystem.discoveredSpecies.size >= 50) {
+                        this.victory();
+                    }
+                }
+            }
+
+            showDiscovery(species) {
+                this.showingDiscovery = true;
+                const popup = document.getElementById('discovery-popup');
+                const content = document.getElementById('discovery-content');
+                
+                content.innerHTML = `
+                    <div class="space-y-2 text-left">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-16 h-16 rounded-full" style="background-color: ${species.color}; box-shadow: 0 0 20px ${species.color}"></div>
+                            <div>
+                                <div class="text-lg font-bold text-cyan-400">${species.name}</div>
+                                <div class="text-xs text-gray-400">${species.type.toUpperCase()} | TIER ${species.tier}</div>
+                            </div>
+                        </div>
+                        <p>${species.desc}</p>
+                        <div class="grid grid-cols-2 gap-2 text-xs mt-3">
+                            <div class="bg-black/30 p-2 rounded">
+                                <span class="text-gray-400">体长:</span> <span class="text-cyan-300">${species.size}cm</span>
+                            </div>
+                            <div class="bg-black/30 p-2 rounded">
+                                <span class="text-gray-400">种群:</span> <span class="text-cyan-300">${species.population}</span>
+                            </div>
+                            <div class="bg-black/30 p-2 rounded">
+                                <span class="text-gray-400">行为:</span> <span class="text-cyan-300">${species.behavior.movement}</span>
+                            </div>
+                            <div class="bg-black/30 p-2 rounded">
+                                <span class="text-gray-400">真实性:</span> <span class="text-cyan-300">${species.real ? '已确认' : '理论推测'}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                popup.classList.remove('hidden');
+                
+                // 标记元素为已发现
+                const el = document.querySelector(`[data-id="${species.id}"]`);
+                if (el) {
+                    el.style.border = '2px solid #00ffcc';
+                    el.style.animation = 'pulse 2s infinite';
+                }
+            }
+
+            closeDiscovery() {
+                document.getElementById('discovery-popup').classList.add('hidden');
+                this.showingDiscovery = false;
+            }
+
+            collectSample() {
+                if (this.energy > 5) {
+                    this.energy -= 5;
+                    this.addLog("正在采集环境样本...", "info");
+                    
+                    // 随机获得资源
+                    if (Math.random() < 0.3) {
+                        this.oxygen = Math.min(100, this.oxygen + 10);
+                        this.addLog("样本分析: 发现高含氧微生物群落", "success");
+                    }
+                }
+            }
+
+            toggleSonar() {
+                this.sonarActive = !this.sonarActive;
+                const overlay = document.getElementById('scan-overlay');
+                overlay.style.opacity = this.sonarActive ? '1' : '0';
+                this.addLog(this.sonarActive ? "声纳系统已激活" : "声纳系统已关闭", "info");
+                
+                if (this.sonarActive && this.synth) {
+                    this.synth.triggerAttackRelease("C3", "2n");
+                }
+            }
+
+            toggleLights() {
+                this.lightsOn = !this.lightsOn;
+                const light = document.getElementById('probe-light');
+                light.style.opacity = this.lightsOn ? '1' : '0';
+                this.addLog(this.lightsOn ? "探照灯已开启" : "探照灯已关闭", "info");
+            }
+
+            pause() {
+                this.paused = !this.paused;
+                this.addLog(this.paused ? "任务暂停" : "任务继续", "info");
+            }
+
+            updateHUD() {
+                document.getElementById('energy-bar').style.width = `${this.energy}%`;
+                document.getElementById('oxygen-bar').style.width = `${this.oxygen}%`;
+                document.getElementById('sample-count').textContent = `${this.samples}/50`;
+                document.getElementById('discovered-count').textContent = this.ecosystem.discoveredSpecies.size;
+                
+                const minutes = Math.floor(this.missionTime / 60000);
+                const seconds = Math.floor((this.missionTime % 60000) / 1000);
+                document.getElementById('mission-time').textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                // 更新环境参数
+                document.getElementById('temp-display').textContent = `${Math.floor(this.ecosystem.temperature)}°C`;
+                document.getElementById('h2s-level').textContent = 
+                    this.ecosystem.h2sConcentration > 0.7 ? 'High' : 
+                    this.ecosystem.h2sConcentration > 0.4 ? 'Medium' : 'Low';
+                
+                // 深度标记
+                const depthPercent = 20 + (Math.sin(this.missionTime * 0.0001) * 10);
+                document.getElementById('depth-marker').style.top = `${depthPercent}%`;
+            }
+
+            updateSpeciesGrid() {
+                const grid = document.getElementById('species-grid');
+                grid.innerHTML = '';
+                
+                this.ecosystem.species.forEach(s => {
+                    const cell = document.createElement('div');
+                    cell.className = `w-8 h-8 rounded border border-cyan-500/30 cursor-pointer transition-all ${s.discovered ? 'bg-cyan-500/50' : 'bg-black/50 hover:bg-cyan-900/30'}`;
+                    if (s.discovered) {
+                        cell.style.backgroundColor = s.color;
+                        cell.title = s.name;
+                    } else {
+                        cell.title = "???";
+                    }
+                    grid.appendChild(cell);
+                });
+            }
+
+            showTargetInfo(species) {
+                const container = document.getElementById('target-info');
+                if (species.discovered) {
+                    container.innerHTML = `
+                        <div class="space-y-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 rounded-full" style="background-color: ${species.color}"></div>
+                                <div>
+                                    <div class="font-bold text-cyan-400">${species.name}</div>
+                                    <div class="text-xs text-gray-400">${species.type}</div>
+                                </div>
+                            </div>
+                            <div class="text-xs text-gray-300 space-y-1">
+                                <div>营养级: ${'█'.repeat(species.tier)}${'░'.repeat(5-species.tier)}</div>
+                                <div>种群数量: ${species.population}</div>
+                                <div>体长: ${species.size}cm</div>
+                                <div class="mt-2 text-cyan-600 italic">"${species.desc}"</div>
+                            </div>
+                            <div class="pt-2 border-t border-cyan-500/20">
+                                <div class="text-xs text-gray-400">食物来源:</div>
+                                <div class="flex gap-1 mt-1 flex-wrap">
+                                    ${this.getPreyList(species).map(p => 
+                                        `<span class="px-2 py-1 bg-cyan-900/30 rounded text-xs">${p}</span>`
+                                    ).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = `
+                        <div class="text-center py-8 unknown-pattern rounded">
+                            <div class="text-4xl mb-2">❓</div>
+                            <div class="text-cyan-400 font-bold">未识别生物</div>
+                            <div class="text-xs text-gray-400 mt-2">距离: ${Math.floor(Math.random() * 50 + 10)}m</div>
+                            <div class="text-xs text-gray-400">信号强度: ${Math.floor(Math.random() * 40 + 60)}%</div>
+                            <button onclick="game.attemptDiscovery(game.ecosystem.species.find(s => s.id === ${species.id}))" 
+                                    class="mt-3 px-3 py-1 bg-cyan-600/50 hover:bg-cyan-600 rounded text-xs transition-colors">
+                                尝试识别
+                            </button>
+                        </div>
+                    `;
+                }
+            }
+
+            getPreyList(species) {
+                const preyIds = this.ecosystem.foodWeb.get(species.id) || [];
+                return preyIds.map(id => {
+                    const s = this.ecosystem.species.find(x => x.id === id);
+                    return s ? s.name : '未知';
+                });
+            }
+
+            addLog(message, type = "info") {
+                const log = document.getElementById('mission-log');
+                const entry = document.createElement('div');
+                const colors = {
+                    success: "text-green-400",
+                    info: "text-cyan-400",
+                    warning: "text-yellow-400",
+                    danger: "text-red-400"
+                };
+                entry.className = colors[type] || "text-gray-400";
+                entry.textContent = `> ${message}`;
+                log.insertBefore(entry, log.firstChild);
+                
+                // 限制日志数量
+                while (log.children.length > 20) {
+                    log.removeChild(log.lastChild);
+                }
+            }
+
+            drawParticles() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // 海洋雪花 (marine snow)
+                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                for (let i = 0; i < 50; i++) {
+                    const x = (Math.sin(i * 132.1 + this.missionTime * 0.0001) * 0.5 + 0.5) * this.canvas.width;
+                    const y = ((this.missionTime * 0.01 + i * 100) % this.canvas.height);
+                    const size = Math.sin(i) * 2 + 2;
+                    this.ctx.beginPath();
+                    this.ctx.arc(x, y, size, 0, Math.PI * 2);
+                    this.ctx.fill();
+                }
+
+                // 热泉颗粒
+                if (Math.random() < 0.3) {
+                    this.particles.push({
+                        x: this.canvas.width / 2 + (Math.random() - 0.5) * 100,
+                        y: this.canvas.height / 2 + 50,
+                        vx: (Math.random() - 0.5) * 2,
+                        vy: -Math.random() * 3 - 1,
+                        life: 100,
+                        color: Math.random() > 0.5 ? '#ff6600' : '#ffff00'
+                    });
+                }
+
+                this.particles = this.particles.filter(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.life--;
+                    
+                    this.ctx.fillStyle = p.color;
+                    this.ctx.globalAlpha = p.life / 100;
+                    this.ctx.beginPath();
+                    this.ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    this.ctx.globalAlpha = 1;
+                    
+                    return p.life > 0;
+                });
+            }
+
+            generateBubbles() {
+                const container = document.getElementById('bubbles-container');
+                setInterval(() => {
+                    if (!this.paused && document.hidden === false) {
+                        const bubble = document.createElement('div');
+                        bubble.className = 'bubble';
+                        const size = Math.random() * 20 + 5;
+                        bubble.style.width = `${size}px`;
+                        bubble.style.height = `${size}px`;
+                        bubble.style.left = `${Math.random() * 100}%`;
+                        bubble.style.animationDuration = `${Math.random() * 5 + 5}s`;
+                        container.appendChild(bubble);
+                        
+                        setTimeout(() => bubble.remove(), 10000);
+                    }
+                }, 500);
+            }
+
+            checkOrganismClick(e) {
+                // 检查是否点击了生物
+                const rect = e.target.getBoundingClientRect();
+                // 简化处理，实际应该做碰撞检测
+            }
+
+            victory() {
+                this.paused = true;
+                this.addLog("恭喜！你已完成所有物种的发现！", "success");
+                if (this.synth) {
+                    this.synth.triggerAttackRelease(["C4", "E4", "G4", "C5"], "1n");
+                }
+                
+                setTimeout(() => {
+                    alert(`任务完成！\n\n你发现并记录了深海热泉生态系统的全部50个物种。\n\n生态系统健康度: ${(this.ecosystem.getEcosystemHealth().biodiversity * 100).toFixed(1)}%\n任务用时: ${document.getElementById('mission-time').textContent}\n\n你揭示了黑暗世界中的生命奇迹。`);
+                }, 1000);
+            }
+        }
+
+        // ==================== 食物网可视化 ====================
+
+        class FoodWebVisualization {
+            constructor(canvasId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.nodes = [];
+                this.links = [];
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+                this.initialize();
+                this.animate();
+            }
+
+            resize() {
+                const parent = this.canvas.parentElement;
+                this.canvas.width = parent.clientWidth;
+                this.canvas.height = parent.clientHeight;
+            }
+
+            initialize() {
+                // 创建食物网节点
+                const tiers = [[], [], [], [], []];
+                game.ecosystem.species.forEach(s => {
+                    if (s.tier >= 1 && s.tier <= 5) {
+                        tiers[s.tier - 1].push(s);
+                    }
+                });
+
+                const centerX = this.canvas.width / 2;
+                const centerY = this.canvas.height / 2;
+                const radius = Math.min(centerX, centerY) - 40;
+
+                tiers.forEach((tier, i) => {
+                    const angleStep = (Math.PI * 2) / Math.max(tier.length, 3);
+                    const r = radius * (1 - i * 0.2);
+                    
+                    tier.forEach((s, j) => {
+                        const angle = angleStep * j - Math.PI / 2;
+                        this.nodes.push({
+                            x: centerX + Math.cos(angle) * r,
+                            y: centerY + Math.sin(angle) * r,
+                            species: s,
+                            radius: Math.max(5, s.size / 3),
+                            angle: angle
+                        });
+                    });
+                });
+
+                // 创建连接
+                game.ecosystem.foodWeb.forEach((preyIds, predatorId) => {
+                    const predator = this.nodes.find(n => n.species.id === predatorId);
+                    if (predator) {
+                        preyIds.forEach(preyId => {
+                            const prey = this.nodes.find(n => n.species.id === preyId);
+                            if (prey) {
+                                this.links.push({ source: predator, target: prey });
+                            }
+                        });
+                    }
+                });
+            }
+
+            animate() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // 绘制连接线
+                this.links.forEach(link => {
+                    const discovered = link.source.species.discovered && link.target.species.discovered;
+                    this.ctx.strokeStyle = discovered ? 'rgba(0, 255, 204, 0.3)' : 'rgba(100, 100, 100, 0.1)';
+                    this.ctx.lineWidth = discovered ? 1 : 0.5;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(link.source.x, link.source.y);
+                    this.ctx.lineTo(link.target.x, link.target.y);
+                    this.ctx.stroke();
+                });
+
+                // 绘制节点
+                this.nodes.forEach(node => {
+                    const discovered = node.species.discovered;
+                    this.ctx.fillStyle = discovered ? node.species.color : '#333';
+                    this.ctx.beginPath();
+                    this.ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    if (discovered) {
+                        this.ctx.strokeStyle = '#00ffcc';
+                        this.ctx.lineWidth = 2;
+                        this.ctx.stroke();
+                        
+                        // 发光效果
+                        this.ctx.shadowBlur = 10;
+                        this.ctx.shadowColor = node.species.color;
+                        this.ctx.fill();
+                        this.ctx.shadowBlur = 0;
+                    }
+                });
+
+                requestAnimationFrame(() => this.animate());
+            }
+        }
+
+        // ==================== 初始化游戏 ====================
+
+        let game;
+        let foodWebViz;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            game = new Game();
+            
+            // 延迟初始化食物网，确保game已就绪
+            setTimeout(() => {
+                foodWebViz = new FoodWebVisualization('food-web-canvas');
+            }, 100);
+        });
+
+        // 防止空格滚动页面
+        window.addEventListener('keydown', (e) => {
+            if (e.key === ' ') e.preventDefault();
+        });
+    </script>
+</body>
+</html>

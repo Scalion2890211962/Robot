@@ -1,0 +1,359 @@
+<!-- 核心架构：Three.js + Matter.js + Web Audio API -->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>维度折叠：统一场论</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; color: #fff; font-family: 'Courier New', monospace; }
+        #canvas-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; }
+        .ui-layer { position: fixed; pointer-events: none; z-index: 10; }
+        #theory-switch { bottom: 20px; left: 50%; transform: translateX(-50%); 
+            display: flex; gap: 20px; pointer-events: auto; }
+        .theory-btn { padding: 15px 30px; border: 2px solid; border-radius: 30px; 
+            background: rgba(0,0,0,0.7); cursor: pointer; transition: all 0.3s; }
+        .string-btn { border-color: #00ffff; color: #00ffff; box-shadow: 0 0 20px #00ffff; }
+        .loop-btn { border-color: #ff00ff; color: #ff00ff; box-shadow: 0 0 20px #ff00ff; }
+        .active { background: currentColor; color: #000; font-weight: bold; }
+        #info-panel { top: 20px; left: 20px; max-width: 300px; 
+            background: rgba(0,0,0,0.8); padding: 20px; border-left: 3px solid #fff; }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    
+    <div class="ui-layer" id="info-panel">
+        <h2>统一场论探索</h2>
+        <p id="current-theory">当前理论：弦理论</p>
+        <p id="level-goal">目标：调整弦振动模式，产生引力子</p>
+        <div id="physics-data">
+            维度：10<br>
+            耦合常数：gₛ = 0.5<br>
+            紧致化半径：R = ℓₛ
+        </div>
+    </div>
+    
+    <div class="ui-layer" id="theory-switch">
+        <button class="theory-btn string-btn active" onclick="switchTheory('string')">
+            弦理论<br><small>连续·高维·振动</small>
+        </button>
+        <button class="theory-btn loop-btn" onclick="switchTheory('loop')">
+            圈量子引力<br><small>离散·4D·几何</small>
+        </button>
+    </div>
+
+    <script>
+        // 游戏状态管理
+        const GameState = {
+            currentTheory: 'string', // 'string' | 'loop' | 'unified'
+            level: 1,
+            score: 0,
+            dimensions: 10,
+            planckScale: 1.616e-35
+        };
+
+        // Three.js 场景初始化
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        // 弦理论渲染器：振动弦与卡拉比-丘背景
+        class StringTheoryRenderer {
+            constructor() {
+                this.strings = [];
+                this.calabiYau = null;
+                this.init();
+            }
+            
+            init() {
+                // 创建卡拉比-丘流形近似（使用复杂参数化曲面）
+                const geometry = new THREE.ParametricGeometry((u, v, target) => {
+                    // 简化表示：使用五次超曲面近似
+                    const x = Math.cos(u) * Math.cos(v) * (1 + 0.3*Math.cos(5*u));
+                    const y = Math.cos(u) * Math.sin(v) * (1 + 0.3*Math.cos(5*u));
+                    const z = Math.sin(u) * (1 + 0.3*Math.cos(5*v));
+                    target.set(x, y, z);
+                }, 64, 64);
+                
+                const material = new THREE.MeshPhongMaterial({
+                    color: 0x00ffff,
+                    wireframe: true,
+                    transparent: true,
+                    opacity: 0.3,
+                    emissive: 0x004444
+                });
+                
+                this.calabiYau = new THREE.Mesh(geometry, material);
+                scene.add(this.calabiYau);
+                
+                // 创建可交互弦
+                this.createInteractiveString();
+            }
+            
+            createInteractiveString() {
+                const points = [];
+                for (let i = 0; i < 100; i++) {
+                    points.push(new THREE.Vector3(
+                        (i - 50) * 0.1, 
+                        Math.sin(i * 0.2) * 2, 
+                        0
+                    ));
+                }
+                const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                const material = new THREE.LineBasicMaterial({ 
+                    color: 0x00ffff, 
+                    linewidth: 3 
+                });
+                this.stringMesh = new THREE.Line(geometry, material);
+                scene.add(this.stringMesh);
+            }
+            
+            update(time, frequency, amplitude) {
+                // 更新弦振动
+                const positions = this.stringMesh.geometry.attributes.position.array;
+                for (let i = 0; i < 100; i++) {
+                    const x = (i - 50) * 0.1;
+                    const y = Math.sin(i * 0.1 * frequency + time) * amplitude;
+                    const z = Math.cos(i * 0.1 * frequency * 0.5) * amplitude * 0.5;
+                    positions[i * 3] = x;
+                    positions[i * 3 + 1] = y;
+                    positions[i * 3 + 2] = z;
+                }
+                this.stringMesh.geometry.attributes.position.needsUpdate = true;
+                
+                // 旋转卡拉比-丘流形
+                this.calabiYau.rotation.x += 0.001;
+                this.calabiYau.rotation.y += 0.002;
+            }
+            
+            dispose() {
+                scene.remove(this.calabiYau);
+                scene.remove(this.stringMesh);
+            }
+        }
+
+        // 圈量子引力渲染器：自旋网络
+        class LoopQuantumGravityRenderer {
+            constructor() {
+                this.nodes = [];
+                this.edges = [];
+                this.init();
+            }
+            
+            init() {
+                // 创建自旋网络节点
+                const nodeCount = 20;
+                for (let i = 0; i < nodeCount; i++) {
+                    const geometry = new THREE.SphereGeometry(0.1, 16, 16);
+                    const material = new THREE.MeshPhongMaterial({
+                        color: 0xff00ff,
+                        emissive: 0x440044
+                    });
+                    const node = new THREE.Mesh(geometry, material);
+                    node.position.set(
+                        (Math.random() - 0.5) * 10,
+                        (Math.random() - 0.5) * 10,
+                        (Math.random() - 0.5) * 10
+                    );
+                    node.userData = { spin: Math.floor(Math.random() * 4) / 2 };
+                    this.nodes.push(node);
+                    scene.add(node);
+                }
+                
+                // 创建边（量子化面积）
+                this.updateEdges();
+            }
+            
+            updateEdges() {
+                // 清除旧边
+                this.edges.forEach(edge => scene.remove(edge));
+                this.edges = [];
+                
+                // 连接邻近节点
+                for (let i = 0; i < this.nodes.length; i++) {
+                    for (let j = i + 1; j < this.nodes.length; j++) {
+                        const dist = this.nodes[i].position.distanceTo(this.nodes[j].position);
+                        if (dist < 4) {
+                            const geometry = new THREE.CylinderGeometry(0.02, 0.02, dist, 8);
+                            const material = new THREE.MeshBasicMaterial({
+                                color: 0xff00ff,
+                                transparent: true,
+                                opacity: 0.6
+                            });
+                            const edge = new THREE.Mesh(geometry, material);
+                            
+                            // 定位边
+                            edge.position.copy(this.nodes[i].position).lerp(this.nodes[j].position, 0.5);
+                            edge.lookAt(this.nodes[j].position);
+                            edge.rotateX(Math.PI / 2);
+                            
+                            this.edges.push(edge);
+                            scene.add(edge);
+                        }
+                    }
+                }
+            }
+            
+            update(time) {
+                // 节点量子涨落
+                this.nodes.forEach((node, i) => {
+                    node.position.y += Math.sin(time + i) * 0.002;
+                    const scale = 1 + node.userData.spin * 0.5;
+                    node.scale.setScalar(scale + Math.sin(time * 2 + i) * 0.1);
+                });
+            }
+            
+            dispose() {
+                this.nodes.forEach(n => scene.remove(n));
+                this.edges.forEach(e => scene.remove(e));
+            }
+        }
+
+        // 游戏逻辑
+        let currentRenderer = new StringTheoryRenderer();
+        let stringFreq = 1.0;
+        let stringAmp = 2.0;
+
+        function switchTheory(theory) {
+            // 更新UI
+            document.querySelectorAll('.theory-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`.${theory}-btn`).classList.add('active');
+            
+            // 切换渲染器
+            currentRenderer.dispose();
+            scene.clear();
+            
+            if (theory === 'string') {
+                currentRenderer = new StringTheoryRenderer();
+                GameState.currentTheory = 'string';
+                document.getElementById('current-theory').textContent = '当前理论：弦理论';
+                document.getElementById('level-goal').textContent = '目标：调整弦振动模式，产生引力子';
+            } else {
+                currentRenderer = new LoopQuantumGravityRenderer();
+                GameState.currentTheory = 'loop';
+                document.getElementById('current-theory').textContent = '当前理论：圈量子引力';
+                document.getElementById('level-goal').textContent = '目标：重构自旋网络，平滑时空奇点';
+            }
+            
+            // 添加光源
+            const light = new THREE.PointLight(0xffffff, 1, 100);
+            light.position.set(0, 0, 10);
+            scene.add(light);
+            scene.add(new THREE.AmbientLight(0x404040));
+        }
+
+        // 交互控制
+        let isDragging = false;
+        let previousMousePosition = { x: 0, y: 0 };
+
+        renderer.domElement.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            previousMousePosition = { x: e.clientX, y: e.clientY };
+        });
+
+        renderer.domElement.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            
+            const deltaX = e.clientX - previousMousePosition.x;
+            const deltaY = e.clientY - previousMousePosition.y;
+            
+            if (GameState.currentTheory === 'string') {
+                // 弦理论：垂直滑动改变频率，水平滑动改变振幅
+                stringFreq += deltaY * 0.01;
+                stringAmp += deltaX * 0.01;
+                stringFreq = Math.max(0.1, Math.min(5, stringFreq));
+                stringAmp = Math.max(0.5, Math.min(5, stringAmp));
+            } else {
+                // 圈量子引力：拖拽节点
+                // 简化实现：旋转整个网络
+                scene.rotation.y += deltaX * 0.01;
+                scene.rotation.x += deltaY * 0.01;
+            }
+            
+            previousMousePosition = { x: e.clientX, y: e.clientY };
+        });
+
+        renderer.domElement.addEventListener('mouseup', () => isDragging = false);
+
+        // 触摸支持
+        renderer.domElement.addEventListener('touchstart', (e) => {
+            isDragging = true;
+            previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        });
+
+        renderer.domElement.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            e.preventDefault();
+            const deltaX = e.touches[0].clientX - previousMousePosition.x;
+            const deltaY = e.touches[0].clientY - previousMousePosition.y;
+            
+            if (GameState.currentTheory === 'string') {
+                stringFreq += deltaY * 0.01;
+                stringAmp += deltaX * 0.01;
+                stringFreq = Math.max(0.1, Math.min(5, stringFreq));
+                stringAmp = Math.max(0.5, Math.min(5, stringAmp));
+            } else {
+                scene.rotation.y += deltaX * 0.01;
+                scene.rotation.x += deltaY * 0.01;
+            }
+            
+            previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        });
+
+        // 动画循环
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const time = Date.now() * 0.001;
+            
+            if (GameState.currentTheory === 'string') {
+                currentRenderer.update(time, stringFreq, stringAmp);
+            } else {
+                currentRenderer.update(time);
+            }
+            
+            renderer.render(scene, camera);
+        }
+
+        // 窗口调整
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // 启动
+        camera.position.z = 15;
+        animate();
+
+        // 音频反馈（Web Audio API）
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playTone(frequency, type = 'sine') {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            oscillator.frequency.value = frequency;
+            oscillator.type = type;
+            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.5);
+        }
+
+        // 根据弦振动播放对应粒子音效
+        setInterval(() => {
+            if (GameState.currentTheory === 'string') {
+                // 不同频率对应不同粒子
+                const baseFreq = 440 * stringFreq;
+                playTone(baseFreq, 'sine');
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
