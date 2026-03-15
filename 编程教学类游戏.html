@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Quest - 代码冒险</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.60.0/phaser.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/editor/editor.main.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Sans+SC:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background: #0f172a;
+            overflow: hidden;
+        }
+        
+        .code-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .game-container {
+            box-shadow: 0 0 50px rgba(59, 130, 246, 0.3);
+        }
+        
+        .pixel-corners {
+            clip-path: polygon(
+                0 4px, 4px 4px, 4px 0,
+                calc(100% - 4px) 0, calc(100% - 4px) 4px, 100% 4px,
+                100% calc(100% - 4px), calc(100% - 4px) calc(100% - 4px), calc(100% - 4px) 100%,
+                4px 100%, 4px calc(100% - 4px), 0 calc(100% - 4px)
+            );
+        }
+        
+        .scanline {
+            background: linear-gradient(
+                to bottom,
+                rgba(255,255,255,0),
+                rgba(255,255,255,0) 50%,
+                rgba(0,0,0,0.2) 50%,
+                rgba(0,0,0,0.2)
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+        }
+        
+        .glow-text {
+            text-shadow: 0 0 10px currentColor;
+        }
+        
+        #editor {
+            border: 2px solid #334155;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .console-output {
+            background: #1e1e1e;
+            border-top: 2px solid #334155;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        
+        .btn-retro {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            border: 2px solid #60a5fa;
+            box-shadow: 0 4px 0 #1e40af, 0 5px 10px rgba(0,0,0,0.3);
+            transition: all 0.1s;
+        }
+        
+        .btn-retro:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #1e40af, inset 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            border-color: #f87171;
+            box-shadow: 0 4px 0 #991b1b;
+        }
+        
+        .btn-danger:active {
+            box-shadow: 0 0 0 #991b1b;
+        }
+        
+        .level-star {
+            color: #fbbf24;
+            filter: drop-shadow(0 0 5px rgba(251, 191, 36, 0.5));
+        }
+        
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.5); }
+            50% { box-shadow: 0 0 40px rgba(59, 130, 246, 0.8); }
+        }
+        
+        .animate-glow {
+            animation: pulse-glow 2s infinite;
+        }
+        
+        .typing-cursor::after {
+            content: '|';
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col text-white">
+
+    <!-- 顶部 HUD -->
+    <header class="h-16 bg-slate-900 border-b-2 border-slate-700 flex items-center justify-between px-6 shrink-0 z-10">
+        <div class="flex items-center gap-4">
+            <div class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent glow-text">
+                ⚔️ CODE QUEST
+            </div>
+            <div class="h-6 w-px bg-slate-600"></div>
+            <div class="flex items-center gap-2">
+                <span class="text-slate-400 text-sm">关卡</span>
+                <span class="text-xl font-bold text-yellow-400" id="level-indicator">1-1</span>
+                <div class="flex gap-1 ml-2" id="stars-container">
+                    <span class="level-star text-lg">★</span>
+                    <span class="level-star text-lg opacity-30">★</span>
+                    <span class="level-star text-lg opacity-30">★</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-6">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded bg-red-900 border-2 border-red-500 flex items-center justify-center">
+                    ❤️
+                </div>
+                <div class="w-32 h-4 bg-slate-800 rounded-full overflow-hidden border border-slate-600">
+                    <div class="h-full bg-gradient-to-r from-red-500 to-red-400 transition-all duration-500" style="width: 100%" id="health-bar"></div>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-blue-400 font-bold">XP:</span>
+                <span class="text-xl font-bold" id="xp-display">0</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主游戏区域 -->
+    <main class="flex-1 flex overflow-hidden">
+        
+        <!-- 左侧：Phaser 游戏画布 -->
+        <div class="w-1/2 bg-slate-950 relative flex items-center justify-center p-4">
+            <div class="absolute inset-0 scanline z-10 pointer-events-none opacity-30"></div>
+            <div id="game-container" class="game-container rounded-lg overflow-hidden border-4 border-slate-700 animate-glow"></div>
+            
+            <!-- 游戏覆盖层 UI -->
+            <div class="absolute top-6 left-6 bg-slate-900/90 border border-slate-600 rounded-lg p-3 z-20">
+                <div class="text-xs text-slate-400 mb-1">目标</div>
+                <div class="text-sm font-bold text-green-400" id="objective-text">移动到终点 🚪</div>
+            </div>
+            
+            <div class="absolute bottom-6 left-6 right-6 bg-slate-900/90 border border-slate-600 rounded-lg p-4 z-20">
+                <div class="text-xs text-slate-400 mb-2">可用指令</div>
+                <div class="flex gap-2 flex-wrap" id="available-commands">
+                    <code class="px-2 py-1 bg-blue-900/50 border border-blue-500/50 rounded text-xs text-blue-300">hero.move(direction, steps)</code>
+                    <code class="px-2 py-1 bg-purple-900/50 border border-purple-500/50 rounded text-xs text-purple-300">hero.attack()</code>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧：代码编辑器和控制台 -->
+        <div class="w-1/2 bg-slate-900 border-l-2 border-slate-700 flex flex-col">
+            
+            <!-- 编辑器区域 -->
+            <div class="flex-1 flex flex-col p-4">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-bold text-slate-300">📝 代码编辑器</span>
+                        <span class="text-xs px-2 py-0.5 bg-green-900/50 text-green-400 rounded border border-green-500/30">JavaScript</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="game.loadExample()" class="px-3 py-1 text-xs bg-slate-700 hover:bg-slate-600 rounded border border-slate-500 transition-colors">
+                            加载示例
+                        </button>
+                        <button onclick="game.resetCode()" class="px-3 py-1 text-xs bg-slate-700 hover:bg-slate-600 rounded border border-slate-500 transition-colors">
+                            重置
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="editor" class="flex-1 bg-slate-950 rounded-lg"></div>
+                
+                <!-- 控制按钮 -->
+                <div class="flex gap-3 mt-4">
+                    <button onclick="game.runCode()" class="btn-retro flex-1 py-3 rounded-lg font-bold text-white flex items-center justify-center gap-2 text-lg">
+                        <span>▶</span> 运行代码
+                    </button>
+                    <button onclick="game.stopExecution()" class="btn-retro btn-danger px-6 rounded-lg font-bold text-white flex items-center justify-center">
+                        <span>⏹</span>
+                    </button>
+                    <button onclick="game.showHint()" class="px-4 py-3 bg-yellow-600 hover:bg-yellow-500 rounded-lg font-bold text-white border-2 border-yellow-400 transition-colors">
+                        💡 提示
+                    </button>
+                </div>
+            </div>
+
+            <!-- 控制台输出 -->
+            <div class="h-48 console-output p-4 overflow-hidden flex flex-col">
+                <div class="flex items-center justify-between mb-2 border-b border-slate-700 pb-2">
+                    <span class="text-xs font-bold text-slate-400">🖥️ 控制台输出</span>
+                    <button onclick="game.clearConsole()" class="text-xs text-slate-500 hover:text-slate-300">清除</button>
+                </div>
+                <div id="console-content" class="flex-1 overflow-y-auto code-font text-sm space-y-1">
+                    <div class="text-slate-500 italic">等待程序执行...</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 关卡完成弹窗 -->
+    <div id="victory-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-slate-800 border-2 border-yellow-400 rounded-2xl p-8 max-w-md w-full mx-4 transform scale-100 transition-transform pixel-corners">
+            <div class="text-center">
+                <div class="text-6xl mb-4">🎉</div>
+                <h2 class="text-3xl font-bold text-yellow-400 mb-2 glow-text">关卡完成！</h2>
+                <div class="flex justify-center gap-2 text-4xl my-4" id="victory-stars">
+                    <span class="level-star">★</span>
+                    <span class="level-star">★</span>
+                    <span class="level-star opacity-30">★</span>
+                </div>
+                <div class="space-y-2 mb-6 text-slate-300">
+                    <p>代码行数: <span class="text-white font-bold" id="code-lines">5</span></p>
+                    <p>执行时间: <span class="text-white font-bold" id="exec-time">1.2s</span></p>
+                    <p>获得经验: <span class="text-green-400 font-bold">+150 XP</span></p>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="game.nextLevel()" class="btn-retro flex-1 py-3 rounded-lg font-bold text-white">
+                        下一关 →
+                    </button>
+                    <button onclick="game.closeModal()" class="px-4 py-3 bg-slate-700 rounded-lg font-bold text-white border-2 border-slate-500">
+                        重玩
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 提示弹窗 -->
+    <div id="hint-modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50">
+        <div class="bg-slate-800 border border-blue-400 rounded-xl p-6 max-w-lg w-full mx-4">
+            <h3 class="text-xl font-bold text-blue-400 mb-3">💡 提示</h3>
+            <div class="text-slate-300 mb-4 leading-relaxed" id="hint-content">
+                尝试使用 for 循环来重复移动指令，这样可以获得三星评价！
+            </div>
+            <div class="bg-slate-900 p-3 rounded border border-slate-700 code-font text-sm text-green-400 mb-4">
+                for(let i = 0; i < 3; i++) {<br>
+                &nbsp;&nbsp;hero.move('right');<br>
+                }
+            </div>
+            <button onclick="document.getElementById('hint-modal').classList.add('hidden')" class="w-full py-2 bg-blue-600 hover:bg-blue-500 rounded font-bold text-white">
+                明白了
+            </button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
+    <script>
+        // 游戏配置和状态
+        const GameConfig = {
+            tileSize: 64,
+            gridWidth: 10,
+            gridHeight: 8,
+            animationSpeed: 500
+        };
+
+        // 关卡数据
+        const levels = [
+            {
+                id: '1-1',
+                name: '初次冒险',
+                objective: '移动到终点 🚪',
+                hint: '使用 hero.move("right", 3) 来向右移动3步',
+                commands: ['hero.move(direction, steps)', 'hero.collect()'],
+                grid: [
+                    [1,1,1,1,1,1,1,1],
+                    [1,2,0,0,0,0,3,1],
+                    [1,1,1,1,1,1,1,1]
+                ],
+                startPos: {x: 1, y: 1},
+                endPos: {x: 6, y: 1},
+                gems: [],
+                enemies: [],
+                solution: 'hero.move("right", 5)',
+                minLines: 1,
+                tutorial: true
+            },
+            {
+                id: '1-2',
+                name: '收集宝石',
+                objective: '收集所有宝石 💎',
+                hint: '使用 hero.collect() 收集宝石，规划好路径！',
+                commands: ['hero.move(direction, steps)', 'hero.collect()'],
+                grid: [
+                    [1,1,1,1,1,1,1],
+                    [1,2,4,0,4,3,1],
+                    [1,1,1,1,1,1,1]
+                ],
+                startPos: {x: 1, y: 1},
+                endPos: {x: 5, y: 1},
+                gems: [{x: 2, y: 1}, {x: 4, y: 1}],
+                enemies: [],
+                solution: 'hero.move("right");\nhero.collect();\nhero.move("right", 2);\nhero.collect();',
+                minLines: 4
+            },
+            {
+                id: '1-3',
+                name: '循环峡谷',
+                objective: '使用循环收集5颗宝石',
+                hint: '使用 for 循环重复执行代码，例如：for(let i=0; i<5; i++) { ... }',
+                commands: ['hero.move(direction)', 'hero.collect()', 'for(let i=0; i<n; i++)'],
+                grid: [
+                    [1,1,1,1,1,1,1,1],
+                    [1,2,4,4,4,4,4,3],
+                    [1,1,1,1,1,1,1,1]
+                ],
+                startPos: {x: 1, y: 1},
+                endPos: {x: 7, y: 1},
+                gems: [{x: 2, y: 1}, {x: 3, y: 1}, {x: 4, y: 1}, {x: 5, y: 1}, {x: 6, y: 1}],
+                enemies: [],
+                solution: 'for(let i=0; i<5; i++) {\n  hero.move("right");\n  hero.collect();\n}',
+                minLines: 3,
+                requiresLoop: true
+            }
+        ];
+
+        // 代码执行沙箱
+        class CodeSandbox {
+            constructor(gameScene) {
+                this.scene = gameScene;
+                this.executionQueue = [];
+                this.isRunning = false;
+                this.shouldStop = false;
+            }
+
+            async execute(code) {
+                this.shouldStop = false;
+                this.executionQueue = [];
+                
+                // 创建安全的执行环境
+                const hero = this.createHeroProxy();
+                const console = this.createConsoleProxy();
+                
+                // 包装代码以捕获调用
+                const wrappedCode = `
+                    try {
+                        ${code}
+                    } catch(e) {
+                        console.error(e.message);
+                    }
+                `;
+
+                try {
+                    // 使用 Function 创建局部作用域
+                    const func = new Function('hero', 'console', wrappedCode);
+                    func(hero, console);
+                    
+                    // 开始执行队列
+                    await this.runExecutionQueue();
+                } catch (error) {
+                    this.log(`❌ 错误: ${error.message}`, 'error');
+                    return false;
+                }
+                
+                return !this.shouldStop;
+            }
+
+            createHeroProxy() {
+                return {
+                    move: (direction, steps = 1) => {
+                        this.executionQueue.push({
+                            type: 'move',
+                            direction,
+                            steps: parseInt(steps) || 1
+                        });
+                    },
+                    collect: () => {
+                        this.executionQueue.push({type: 'collect'});
+                    },
+                    attack: () => {
+                        this.executionQueue.push({type: 'attack'});
+                    }
+                };
+            }
+
+            createConsoleProxy() {
+                return {
+                    log: (...args) => {
+                        this.log(args.join(' '), 'info');
+                    },
+                    error: (msg) => {
+                        this.log(msg, 'error');
+                    }
+                };
+            }
+
+            async runExecutionQueue() {
+                this.isRunning = true;
+                
+                for (let i = 0; i < this.executionQueue.length; i++) {
+                    if (this.shouldStop) break;
+                    
+                    const action = this.executionQueue[i];
+                    this.highlightCodeLine(i);
+                    
+                    await this.executeAction(action);
+                    await this.sleep(GameConfig.animationSpeed);
+                }
+                
+                this.isRunning = false;
+                
+                // 检查胜利条件
+                if (!this.shouldStop) {
+                    setTimeout(() => this.scene.checkVictory(), 500);
+                }
+            }
+
+            async executeAction(action) {
+                switch(action.type) {
+                    case 'move':
+                        await this.scene.moveHero(action.direction, action.steps);
+                        break;
+                    case 'collect':
+                        await this.scene.collectGem();
+                        break;
+                    case 'attack':
+                        await this.scene.heroAttack();
+                        break;
+                }
+            }
+
+            highlightCodeLine(index) {
+                // 这里可以添加代码高亮逻辑
+                this.log(`▶ 执行第 ${index + 1} 个动作`, 'debug');
+            }
+
+            log(message, type = 'info') {
+                const consoleDiv = document.getElementById('console-content');
+                const line = document.createElement('div');
+                line.className = type === 'error' ? 'text-red-400' : 
+                                type === 'success' ? 'text-green-400' :
+                                type === 'debug' ? 'text-slate-500' : 'text-blue-300';
+                line.textContent = `> ${message}`;
+                consoleDiv.appendChild(line);
+                consoleDiv.scrollTop = consoleDiv.scrollHeight;
+            }
+
+            sleep(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+
+            stop() {
+                this.shouldStop = true;
+                this.isRunning = false;
+            }
+        }
+
+        // Phaser 场景
+        class GameScene extends Phaser.Scene {
+            constructor() {
+                super({ key: 'GameScene' });
+                this.currentLevel = 0;
+                this.heroPos = {x: 0, y: 0};
+                this.collectedGems = 0;
+                this.totalGems = 0;
+            }
+
+            preload() {
+                // 创建程序生成的纹理
+                this.load.setBaseURL('');
+            }
+
+            create() {
+                this.createTextures();
+                this.loadLevel(0);
+            }
+
+            createTextures() {
+                // 地板
+                const floorGraphics = this.make.graphics({x: 0, y: 0, add: false});
+                floorGraphics.fillStyle(0x1e293b);
+                floorGraphics.fillRect(0, 0, 64, 64);
+                floorGraphics.lineStyle(2, 0x334155);
+                floorGraphics.strokeRect(0, 0, 64, 64);
+                floorGraphics.generateTexture('floor', 64, 64);
+
+                // 墙壁
+                const wallGraphics = this.make.graphics({x: 0, y: 0, add: false});
+                wallGraphics.fillStyle(0x475569);
+                wallGraphics.fillRect(0, 0, 64, 64);
+                wallGraphics.lineStyle(3, 0x64748b);
+                wallGraphics.strokeRect(0, 0, 64, 64);
+                // 添加砖块纹理
+                wallGraphics.lineStyle(2, 0x334155);
+                wallGraphics.lineBetween(0, 20, 64, 20);
+                wallGraphics.lineBetween(32, 0, 32, 20);
+                wallGraphics.lineBetween(0, 44, 64, 44);
+                wallGraphics.lineBetween(16, 20, 16, 44);
+                wallGraphics.lineBetween(48, 20, 48, 44);
+                wallGraphics.generateTexture('wall', 64, 64);
+
+                // 英雄
+                const heroGraphics = this.make.graphics({x: 0, y: 0, add: false});
+                // 身体
+                heroGraphics.fillStyle(0x3b82f6);
+                heroGraphics.fillCircle(32, 32, 20);
+                // 眼睛
+                heroGraphics.fillStyle(0xffffff);
+                heroGraphics.fillCircle(24, 28, 6);
+                heroGraphics.fillCircle(40, 28, 6);
+                heroGraphics.fillStyle(0x000000);
+                heroGraphics.fillCircle(24, 28, 3);
+                heroGraphics.fillCircle(40, 28, 3);
+                // 剑
+                heroGraphics.lineStyle(4, 0x94a3b8);
+                heroGraphics.lineBetween(45, 35, 55, 15);
+                heroGraphics.generateTexture('hero', 64, 64);
+
+                // 宝石
+                const gemGraphics = this.make.graphics({x: 0, y: 0, add: false});
+                gemGraphics.fillStyle(0x10b981);
+                gemGraphics.beginPath();
+                gemGraphics.moveTo(32, 10);
+                gemGraphics.lineTo(50, 25);
+                gemGraphics.lineTo(32, 50);
+                gemGraphics.lineTo(14, 25);
+                gemGraphics.closePath();
+                gemGraphics.fill();
+                gemGraphics.lineStyle(2, 0x34d399);
+                gemGraphics.strokePath();
+                gemGraphics.generateTexture('gem', 64, 64);
+
+                // 终点门
+                const doorGraphics = this.make.graphics({x: 0, y: 0, add: false});
+                doorGraphics.fillStyle(0x7c3aed);
+                doorGraphics.fillRect(10, 0, 44, 64);
+                doorGraphics.fillStyle(0xa78bfa);
+                doorGraphics.fillRect(15, 5, 34, 54);
+                doorGraphics.fillStyle(0xfbbf24);
+                doorGraphics.fillCircle(40, 32, 4);
+                doorGraphics.generateTexture('door', 64, 64);
+
+                // 敌人
+                const enemyGraphics = this.make.graphics({x: 0, y: 0, add: false});
+                enemyGraphics.fillStyle(0xef4444);
+                enemyGraphics.fillCircle(32, 32, 18);
+                enemyGraphics.fillStyle(0xffffff);
+                enemyGraphics.fillCircle(24, 28, 5);
+                enemyGraphics.fillCircle(40, 28, 5);
+                enemyGraphics.fillStyle(0x000000);
+                enemyGraphics.fillCircle(24, 30, 2);
+                enemyGraphics.fillCircle(40, 30, 2);
+                // 角
+                enemyGraphics.fillStyle(0x991b1b);
+                enemyGraphics.beginPath();
+                enemyGraphics.moveTo(15, 15);
+                enemyGraphics.lineTo(5, 5);
+                enemyGraphics.lineTo(20, 10);
+                enemyGraphics.closePath();
+                enemyGraphics.fill();
+                enemyGraphics.beginPath();
+                enemyGraphics.moveTo(49, 15);
+                enemyGraphics.lineTo(59, 5);
+                enemyGraphics.lineTo(44, 10);
+                enemyGraphics.closePath();
+                enemyGraphics.fill();
+                enemyGraphics.generateTexture('enemy', 64, 64);
+            }
+
+            loadLevel(levelIndex) {
+                this.currentLevel = levelIndex;
+                const level = levels[levelIndex];
+                
+                // 清理旧场景
+                this.children.removeAll();
+                
+                // 更新UI
+                document.getElementById('level-indicator').textContent = level.id;
+                document.getElementById('objective-text').textContent = level.objective;
+                
+                // 更新可用命令
+                const cmdContainer = document.getElementById('available-commands');
+                cmdContainer.innerHTML = level.commands.map(cmd => 
+                    `<code class="px-2 py-1 bg-blue-900/50 border border-blue-500/50 rounded text-xs text-blue-300">${cmd}</code>`
+                ).join('');
+                
+                // 重置状态
+                this.heroPos = {...level.startPos};
+                this.collectedGems = 0;
+                this.totalGems = level.gems.length;
+                
+                // 计算偏移以居中显示
+                const gridWidth = level.grid[0].length * GameConfig.tileSize;
+                const gridHeight = level.grid.length * GameConfig.tileSize;
+                const offsetX = (this.scale.width - gridWidth) / 2;
+                const offsetY = (this.scale.height - gridHeight) / 2;
+                this.gridOffset = {x: offsetX, y: offsetY};
+                
+                // 创建地图
+                this.tiles = [];
+                this.gems = [];
+                this.enemies = [];
+                
+                for (let y = 0; y < level.grid.length; y++) {
+                    this.tiles[y] = [];
+                    for (let x = 0; x < level.grid[y].length; x++) {
+                        const tileType = level.grid[y][x];
+                        const posX = offsetX + x * GameConfig.tileSize;
+                        const posY = offsetY + y * GameConfig.tileSize;
+                        
+                        if (tileType === 1) {
+                            this.add.image(posX + 32, posY + 32, 'wall');
+                            this.tiles[y][x] = 'wall';
+                        } else {
+                            const floor = this.add.image(posX + 32, posY + 32, 'floor');
+                            floor.setInteractive();
+                            this.tiles[y][x] = 'floor';
+                        }
+                    }
+                }
+                
+                // 放置宝石
+                level.gems.forEach(gemPos => {
+                    const posX = offsetX + gemPos.x * GameConfig.tileSize + 32;
+                    const posY = offsetY + gemPos.y * GameConfig.tileSize + 32;
+                    const gem = this.add.image(posX, posY, 'gem');
+                    gem.setScale(0);
+                    this.tweens.add({
+                        targets: gem,
+                        scale: 1,
+                        duration: 500,
+                        ease: 'Back.out'
+                    });
+                    this.gems.push({sprite: gem, x: gemPos.x, y: gemPos.y, collected: false});
+                });
+                
+                // 放置敌人
+                level.enemies.forEach(enemyPos => {
+                    const posX = offsetX + enemyPos.x * GameConfig.tileSize + 32;
+                    const posY = offsetY + enemyPos.y * GameConfig.tileSize + 32;
+                    const enemy = this.add.image(posX, posY, 'enemy');
+                    this.enemies.push({sprite: enemy, x: enemyPos.x, y: enemyPos.y});
+                });
+                
+                // 放置终点
+                const endX = offsetX + level.endPos.x * GameConfig.tileSize + 32;
+                const endY = offsetY + level.endPos.y * GameConfig.tileSize + 32;
+                this.door = this.add.image(endX, endY, 'door');
+                
+                // 放置英雄
+                const heroX = offsetX + level.startPos.x * GameConfig.tileSize + 32;
+                const heroY = offsetY + level.startPos.y * GameConfig.tileSize + 32;
+                this.hero = this.add.image(heroX, heroY, 'hero');
+                this.hero.setDepth(10);
+                
+                // 添加粒子效果
+                this.createParticles();
+                
+                // 初始化沙箱
+                this.sandbox = new CodeSandbox(this);
+                
+                // 更新编辑器提示
+                window.game.updateEditorTemplate(level);
+            }
+
+            createParticles() {
+                this.collectParticles = this.add.particles(0, 0, 'gem', {
+                    speed: {min: 50, max: 150},
+                    scale: {start: 0.5, end: 0},
+                    blendMode: 'ADD',
+                    lifespan: 600,
+                    gravityY: 200,
+                    emitting: false
+                });
+            }
+
+            async moveHero(direction, steps) {
+                const level = levels[this.currentLevel];
+                const dx = direction === 'right' ? 1 : direction === 'left' ? -1 : 0;
+                const dy = direction === 'down' ? 1 : direction === 'up' ? -1 : 0;
+                
+                for (let i = 0; i < steps; i++) {
+                    const newX = this.heroPos.x + dx;
+                    const newY = this.heroPos.y + dy;
+                    
+                    // 检查碰撞
+                    if (this.checkCollision(newX, newY)) {
+                        this.sandbox.log(`无法向${direction}移动，遇到障碍物`, 'error');
+                        this.shakeHero();
+                        return;
+                    }
+                    
+                    // 更新位置
+                    this.heroPos.x = newX;
+                    this.heroPos.y = newY;
+                    
+                    // 动画移动
+                    const targetX = this.gridOffset.x + newX * GameConfig.tileSize + 32;
+                    const targetY = this.gridOffset.y + newY * GameConfig.tileSize + 32;
+                    
+                    await new Promise(resolve => {
+                        this.tweens.add({
+                            targets: this.hero,
+                            x: targetX,
+                            y: targetY,
+                            duration: 400,
+                            ease: 'Power2',
+                            onComplete: resolve
+                        });
+                    });
+                    
+                    // 检查宝石收集
+                    this.checkGemCollection();
+                }
+            }
+
+            checkCollision(x, y) {
+                const level = levels[this.currentLevel];
+                if (y < 0 || y >= level.grid.length || x < 0 || x >= level.grid[0].length) {
+                    return true;
+                }
+                return level.grid[y][x] === 1;
+            }
+
+            checkGemCollection() {
+                this.gems.forEach(gem => {
+                    if (!gem.collected && gem.x === this.heroPos.x && gem.y === this.heroPos.y) {
+                        gem.collected = true;
+                        this.collectedGems++;
+                        
+                        // 收集动画
+                        this.tweens.add({
+                            targets: gem.sprite,
+                            scale: 1.5,
+                            alpha: 0,
+                            duration: 300,
+                            onComplete: () => gem.sprite.destroy()
+                        });
+                        
+                        // 粒子效果
+                        this.collectParticles.emitParticleAt(this.hero.x, this.hero.y, 10);
+                        
+                        this.sandbox.log(`✨ 收集到宝石！(${this.collectedGems}/${this.totalGems})`, 'success');
+                    }
+                });
+            }
+
+            async collectGem() {
+                const gem = this.gems.find(g => g.x === this.heroPos.x && g.y === this.heroPos.y && !g.collected);
+                if (gem) {
+                    gem.collected = true;
+                    this.collectedGems++;
+                    this.tweens.add({
+                        targets: gem.sprite,
+                        scale: 1.5,
+                        alpha: 0,
+                        duration: 300
+                    });
+                    this.sandbox.log(`✨ 收集到宝石！(${this.collectedGems}/${this.totalGems})`, 'success');
+                } else {
+                    this.sandbox.log('这里没有宝石可以收集', 'error');
+                }
+            }
+
+            shakeHero() {
+                this.tweens.add({
+                    targets: this.hero,
+                    x: this.hero.x + 5,
+                    duration: 50,
+                    yoyo: true,
+                    repeat: 3
+                });
+            }
+
+            checkVictory() {
+                const level = levels[this.currentLevel];
+                const atEnd = this.heroPos.x === level.endPos.x && this.heroPos.y === level.endPos.y;
+                const allGems = this.collectedGems >= this.totalGems;
+                
+                let victory = false;
+                if (level.gems.length > 0) {
+                    victory = atEnd && allGems;
+                } else {
+                    victory = atEnd;
+                }
+                
+                if (victory) {
+                    this.showVictory();
+                } else {
+                    if (!atEnd && level.gems.length > 0 && !allGems) {
+                        this.sandbox.log('还需要收集所有宝石并到达终点！', 'error');
+                    } else if (!atEnd) {
+                        this.sandbox.log('还没有到达终点！', 'error');
+                    } else if (!allGems && level.gems.length > 0) {
+                        this.sandbox.log('还有宝石没有收集！', 'error');
+                    }
+                }
+            }
+
+            showVictory() {
+                const code = window.game.getEditorValue();
+                const lines = code.split('\n').filter(l => l.trim()).length;
+                const level = levels[this.currentLevel];
+                
+                // 计算星星
+                let stars = 1;
+                if (lines <= level.minLines) stars = 3;
+                else if (lines <= level.minLines + 2) stars = 2;
+                
+                // 检查是否使用了循环（如果要求）
+                if (level.requiresLoop && !code.includes('for')) {
+                    stars = 1;
+                }
+                
+                // 更新弹窗
+                document.getElementById('code-lines').textContent = lines;
+                document.getElementById('exec-time').textContent = (Math.random() * 2 + 0.5).toFixed(1) + 's';
+                
+                const starContainer = document.getElementById('victory-stars');
+                starContainer.innerHTML = '';
+                for (let i = 0; i < 3; i++) {
+                    const star = document.createElement('span');
+                    star.className = 'level-star ' + (i < stars ? '' : 'opacity-30');
+                    star.textContent = '★';
+                    starContainer.appendChild(star);
+                }
+                
+                document.getElementById('victory-modal').classList.remove('hidden');
+                document.getElementById('victory-modal').classList.add('flex');
+            }
+
+            heroAttack() {
+                // 简单的攻击动画
+                this.tweens.add({
+                    targets: this.hero,
+                    scaleX: 1.2,
+                    scaleY: 1.2,
+                    duration: 100,
+                    yoyo: true
+                });
+                this.sandbox.log('⚔️ 攻击！', 'info');
+            }
+        }
+
+        // 主游戏控制器
+        class CodeQuestGame {
+            constructor() {
+                this.currentLevel = 0;
+                this.editor = null;
+                this.scene = null;
+                this.initPhaser();
+                this.initEditor();
+            }
+
+            initPhaser() {
+                const config = {
+                    type: Phaser.AUTO,
+                    parent: 'game-container',
+                    width: 600,
+                    height: 450,
+                    backgroundColor: '#020617',
+                    pixelArt: true,
+                    scene: GameScene
+                };
+                
+                this.game = new Phaser.Game(config);
+                
+                // 等待场景创建完成
+                setTimeout(() => {
+                    this.scene = this.game.scene.scenes[0];
+                }, 1000);
+            }
+
+            initEditor() {
+                require.config({ 
+                    paths: { 
+                        'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' 
+                    }
+                });
+                
+                require(['vs/editor/editor.main'], () => {
+                    this.editor = monaco.editor.create(document.getElementById('editor'), {
+                        value: '// 在这里编写代码\n// 例如：hero.move("right", 3);\n',
+                        language: 'javascript',
+                        theme: 'vs-dark',
+                        fontSize: 14,
+                        fontFamily: 'JetBrains Mono',
+                        minimap: { enabled: false },
+                        automaticLayout: true,
+                        scrollBeyondLastLine: false,
+                        roundedSelection: false,
+                        padding: { top: 16 },
+                        suggest: {
+                            showKeywords: true,
+                            showSnippets: true
+                        }
+                    });
+                    
+                    // 添加自定义补全
+                    monaco.languages.registerCompletionItemProvider('javascript', {
+                        provideCompletionItems: () => ({
+                            suggestions: [
+                                {
+                                    label: 'hero.move',
+                                    kind: monaco.languages.CompletionItemKind.Method,
+                                    insertText: 'hero.move("${1:right}", ${2:1});',
+                                    insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                                    documentation: '移动英雄'
+                                },
+                                {
+                                    label: 'hero.collect',
+                                    kind: monaco.languages.CompletionItemKind.Method,
+                                    insertText: 'hero.collect();',
+                                    documentation: '收集当前位置的宝石'
+                                },
+                                {
+                                    label: 'for loop',
+                                    kind: monaco.languages.CompletionItemKind.Snippet,
+                                    insertText: 'for(let i = 0; i < ${1:5}; i++) {\n\t$0\n}',
+                                    insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                                    documentation: 'for 循环'
+                                }
+                            ]
+                        })
+                    });
+                });
+            }
+
+            getEditorValue() {
+                return this.editor ? this.editor.getValue() : '';
+            }
+
+            setEditorValue(value) {
+                if (this.editor) {
+                    this.editor.setValue(value);
+                }
+            }
+
+            updateEditorTemplate(level) {
+                if (level.tutorial) {
+                    this.setEditorValue(`// 关卡 ${level.id}: ${level.name}
+// 目标：${level.objective}
+
+// 提示：使用 hero.move("方向", 步数) 来移动
+// 方向可以是： "up", "down", "left", "right"
+
+hero.move("right", 3);
+`);
+                } else {
+                    this.setEditorValue(`// 关卡 ${level.id}: ${level.name}
+// 目标：${level.objective}
+
+`);
+                }
+            }
+
+            async runCode() {
+                if (!this.scene || !this.scene.sandbox) return;
+                
+                this.clearConsole();
+                const code = this.getEditorValue();
+                
+                this.logConsole('🚀 开始执行程序...', 'info');
+                this.logConsole('─'.repeat(40), 'debug');
+                
+                const success = await this.scene.sandbox.execute(code);
+                
+                if (success) {
+                    this.logConsole('─'.repeat(40), 'debug');
+                    this.logConsole('✅ 程序执行完成', 'success');
+                }
+            }
+
+            stopExecution() {
+                if (this.scene && this.scene.sandbox) {
+                    this.scene.sandbox.stop();
+                    this.logConsole('⏹ 执行已停止', 'error');
+                }
+            }
+
+            logConsole(message, type = 'info') {
+                const consoleDiv = document.getElementById('console-content');
+                const line = document.createElement('div');
+                line.className = type === 'error' ? 'text-red-400' : 
+                                type === 'success' ? 'text-green-400' :
+                                type === 'debug' ? 'text-slate-500' : 'text-blue-300';
+                line.textContent = message;
+                consoleDiv.appendChild(line);
+                consoleDiv.scrollTop = consoleDiv.scrollHeight;
+            }
+
+            clearConsole() {
+                document.getElementById('console-content').innerHTML = '';
+            }
+
+            loadExample() {
+                const level = levels[this.currentLevel];
+                this.setEditorValue(level.solution);
+                this.logConsole('✨ 已加载示例代码', 'success');
+            }
+
+            resetCode() {
+                const level = levels[this.currentLevel];
+                this.updateEditorTemplate(level);
+                this.clearConsole();
+                if (this.scene) {
+                    this.scene.loadLevel(this.currentLevel);
+                }
+            }
+
+            showHint() {
+                const level = levels[this.currentLevel];
+                document.getElementById('hint-content').textContent = level.hint;
+                document.getElementById('hint-modal').classList.remove('hidden');
+                document.getElementById('hint-modal').classList.add('flex');
+            }
+
+            nextLevel() {
+                document.getElementById('victory-modal').classList.add('hidden');
+                document.getElementById('victory-modal').classList.remove('flex');
+                
+                this.currentLevel++;
+                if (this.currentLevel >= levels.length) {
+                    this.currentLevel = 0;
+                    this.logConsole('🎉 恭喜通关所有关卡！回到第一关。', 'success');
+                }
+                
+                if (this.scene) {
+                    this.scene.loadLevel(this.currentLevel);
+                }
+            }
+
+            closeModal() {
+                document.getElementById('victory-modal').classList.add('hidden');
+                document.getElementById('victory-modal').classList.remove('flex');
+            }
+        }
+
+        // 初始化游戏
+        let game;
+        window.onload = () => {
+            game = new CodeQuestGame();
+        };
+    </script>
+</body>
+</html>
